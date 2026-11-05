@@ -4,8 +4,10 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>页面工厂。</summary>
 public static class PageFactory
 {
+    /// <summary>创建。</summary>
     public static Control Create(ViewModelBase vm) => vm switch
     {
         DashboardViewModel d => new DashboardPage(d),
@@ -24,8 +26,10 @@ public static class PageFactory
     };
 }
 
+/// <summary>颜色。</summary>
 internal static class Colors
 {
+    /// <summary>级别。</summary>
     public static Color? Level(AlarmLevel level) => level switch
     {
         AlarmLevel.Critical or AlarmLevel.Error => Ui.Danger,
@@ -33,6 +37,7 @@ internal static class Colors
         _ => null
     };
 
+    /// <summary>状态。</summary>
     public static Color? Status(object? status) => status?.ToString() switch
     {
         "Failed" or "TimedOut" => Ui.Danger,

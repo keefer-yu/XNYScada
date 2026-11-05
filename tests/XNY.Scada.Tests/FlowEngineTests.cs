@@ -9,8 +9,10 @@ using Xunit;
 
 namespace XNY.Scada.Tests;
 
+/// <summary>流程引擎测试。</summary>
 public class FlowEngineTests
 {
+    /// <summary>测试准备设备。</summary>
     private static async Task SetupDeviceAsync(TestHost h, string instance)
     {
         var devices = h.Get<DeviceConfigService>();
@@ -29,6 +31,7 @@ public class FlowEngineTests
         await devices.ApplyAsync();
     }
 
+    /// <summary>测试双流。</summary>
     private static FlowDocument DoubleFlow() => new()
     {
         Code = "Double",
@@ -53,6 +56,7 @@ public class FlowEngineTests
         ]
     };
 
+    /// <summary>测试标记已触发流运行次数握手并写入结果。</summary>
     [Fact]
     public async Task TagTriggeredFlow_RunsHandshakeAndWritesResult()
     {
@@ -78,6 +82,7 @@ public class FlowEngineTests
         Assert.Equal(["read", "cond", "calc", "hs"], instance.Trace.Select(t => t.NodeId));
     }
 
+    /// <summary>测试发布新版本热点交换时间空闲并缩放是否适用。</summary>
     [Fact]
     public async Task Publish_NewVersion_HotSwapsWhenIdle_AndScalingApplies()
     {
@@ -104,6 +109,7 @@ public class FlowEngineTests
         Assert.True(await h.WaitUntilAsync(() => Equals(h.Tag("PLC.Temp"), 36.5)));
     }
 
+    /// <summary>测试校验器报表缺失项属性表并未知节点列表。</summary>
     [Fact]
     public async Task Validator_ReportsMissingPropertiesAndUnknownNodes()
     {
@@ -123,6 +129,7 @@ public class FlowEngineTests
         await Assert.ThrowsAsync<XNY.Scada.Flow.FlowException>(() => flows.PublishAsync("Bad", v, null, null));
     }
 
+    /// <summary>测试脚本节点并循环节点工作在模拟。</summary>
     [Fact]
     public async Task ScriptNode_And_LoopNode_Work_InSimulation()
     {

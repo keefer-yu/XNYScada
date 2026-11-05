@@ -17,19 +17,28 @@ namespace XNY.Scada.Mes;
 /// 配置驱动的 MES HTTP 客户端：请求模板渲染 → 发送（重试/超时）→ 响应字段映射 → 成功表达式判定；
 /// 网络异常时可写入发件箱等待补传。
 /// </summary>
+/// <param name="httpFactory">HTTP工厂。</param>
+/// <param name="db">数据库客户端。</param>
+/// <param name="options">配置项。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class MesClient(
     IHttpClientFactory httpFactory,
     ISqlSugarClient db,
     MesOptions options,
     ILogger<MesClient> logger) : IMesClient
 {
+    /// <summary>HTTP客户区名称。</summary>
     public const string HttpClientName = "mes";
 
+    /// <summary>配置。</summary>
     private ConcurrentDictionary<string, MesInterfaceEntity> _configs = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>已加载。</summary>
     private volatile bool _loaded;
 
+    /// <summary>MES 调用结束发生变化时触发。</summary>
     public event EventHandler<MesCallLogEntity>? CallCompleted;
 
+    /// <summary>重新加载。</summary>
     public async Task ReloadAsync()
     {
         var list = await db.Queryable<MesInterfaceEntity>().ToListAsync();
@@ -37,6 +46,7 @@ public sealed class MesClient(
         _loaded = true;
     }
 
+    /// <summary>调用。</summary>
     public async Task<MesResult> CallAsync(string interfaceCode, IReadOnlyDictionary<string, object?> args, CancellationToken ct = default)
     {
         if (!_loaded) await ReloadAsync();
@@ -57,6 +67,7 @@ public sealed class MesClient(
         return result;
     }
 
+    /// <summary>测试。</summary>
     public Task<MesResult> TestAsync(MesInterfaceEntity config, IReadOnlyDictionary<string, object?> args, CancellationToken ct = default) =>
         SendAsync(config, RenderBody(config, args), ct);
 
@@ -69,17 +80,21 @@ public sealed class MesClient(
             : new MesResult { Success = false, Message = $"MES 接口未配置: {interfaceCode}" };
     }
 
+    /// <summary>报文方法。</summary>
     public const string SoapMethod = "SOAP";
 
     /// <summary>Method 配置为 SOAP 时按 WebService 调用：POST text/xml，请求模板为 SOAP 信封，响应 XML 转为 JSON 后映射</summary>
     public static bool IsSoap(MesInterfaceEntity config) => string.Equals(config.Method, SoapMethod, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>渲染循环体。</summary>
     public static string RenderBody(string template, IReadOnlyDictionary<string, object?> args) =>
         ScadaExpression.Render(template, args, formatter: JsonFormat);
 
+    /// <summary>渲染循环体。</summary>
     public static string RenderBody(MesInterfaceEntity config, IReadOnlyDictionary<string, object?> args) =>
         IsSoap(config) ? ScadaExpression.Render(config.RequestTemplate, args, formatter: XmlFormat) : RenderBody(config.RequestTemplate, args);
 
+    /// <summary>XML格式。</summary>
     private static string XmlFormat(object? v) => v switch
     {
         null => "",
@@ -101,6 +116,7 @@ public sealed class MesClient(
         _ => JsonSerializer.Serialize(v, Json.Options)
     };
 
+    /// <summary>发送。</summary>
     private async Task<MesResult> SendAsync(MesInterfaceEntity config, string body, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
@@ -138,6 +154,7 @@ public sealed class MesClient(
         return result;
     }
 
+    /// <summary>构建管道。</summary>
     private static ResiliencePipeline<(int, string)> BuildPipeline(MesInterfaceEntity config)
     {
         var builder = new ResiliencePipelineBuilder<(int, string)>();
@@ -157,6 +174,7 @@ public sealed class MesClient(
         return builder.Build();
     }
 
+    /// <summary>发送一次。</summary>
     private async Task<(int, string)> SendOnceAsync(MesInterfaceEntity config, string body, CancellationToken ct)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -188,6 +206,7 @@ public sealed class MesClient(
         return ((int)response.StatusCode, text);
     }
 
+    /// <summary>解释。</summary>
     public static MesResult Interpret(MesInterfaceEntity config, int status, string text)
     {
         var fields = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase) { ["HttpStatus"] = (long)status };

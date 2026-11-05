@@ -13,10 +13,33 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Application.Templates;
 
+/// <summary>机型模板文件的摘要，供界面列出可选模板。</summary>
+/// <param name="Path">路径。</param>
+/// <param name="MachineType">机型编码。</param>
+/// <param name="Name">名称。</param>
+/// <param name="Description">说明。</param>
 public sealed record TemplateInfo(string Path, string MachineType, string Name, string? Description);
 
+/// <summary>一次模板导入的计数与警告。警告不中断导入。</summary>
+/// <param name="Devices">设备数量。</param>
+/// <param name="Tags">点位数量。</param>
+/// <param name="Flows">流程数量。</param>
+/// <param name="Recipes">配方数量。</param>
+/// <param name="MesInterfaces">MES 接口数量。</param>
+/// <param name="Warnings">导入过程中的警告。</param>
 public sealed record TemplateImportResult(int Devices, int Tags, int Flows, int Recipes, int MesInterfaces, IReadOnlyList<string> Warnings);
 
+/// <summary>从 configs/machine-templates 读取机型模板，并写入设备、流程、配方、MES 与界面布局。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="devices">设备。</param>
+/// <param name="flows">流程。</param>
+/// <param name="recipes">配方。</param>
+/// <param name="mes">MES。</param>
+/// <param name="parameters">参数。</param>
+/// <param name="engine">引擎。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="audit">审计。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class MachineTemplateService(
     ISqlSugarClient db,
     DeviceConfigService devices,
@@ -29,8 +52,10 @@ public sealed class MachineTemplateService(
     IAuditService audit,
     ILogger<MachineTemplateService> logger)
 {
+    /// <summary>机型模板目录。</summary>
     public static string TemplateDirectory => Path.Combine(AppContext.BaseDirectory, "configs", "machine-templates");
 
+    /// <summary>列出。</summary>
     public IReadOnlyList<TemplateInfo> List()
     {
         if (!Directory.Exists(TemplateDirectory)) return [];

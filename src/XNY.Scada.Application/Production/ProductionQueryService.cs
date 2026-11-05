@@ -7,18 +7,42 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Application.Production;
 
+/// <summary>生产查询。</summary>
+/// <param name="From">起点节点。</param>
+/// <param name="To">目标节点。</param>
+/// <param name="CellCode">电芯条码。</param>
+/// <param name="TrayCode">托盘码。</param>
+/// <param name="IsOk">是否合格。</param>
+/// <param name="Limit">限制。</param>
 public sealed record ProductionQuery(DateTime From, DateTime To, string? CellCode = null, string? TrayCode = null, bool? IsOk = null, int Limit = 5000);
 
+/// <summary>每小时输出。</summary>
+/// <param name="Hour">小时。</param>
+/// <param name="Total">总计。</param>
+/// <param name="Ok">OK。</param>
+/// <param name="Ng">NG。</param>
 public sealed record HourlyOutput(DateTime Hour, int Total, int Ok, int Ng);
 
+/// <summary>OEE快照。</summary>
+/// <param name="Availability">可用性。</param>
+/// <param name="Performance">性能。</param>
+/// <param name="Quality">值的质量。</param>
+/// <param name="Oee">OEE。</param>
+/// <param name="Uph">每小时产量。</param>
 public sealed record OeeSnapshot(double Availability, double Performance, double Quality, double Oee, double Uph);
 
+/// <summary>生产查询服务。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="audit">审计。</param>
+/// <param name="production">生产。</param>
 public sealed class ProductionQueryService(
     ISqlSugarClient db,
     IPermissionService permissions,
     IAuditService audit,
     IProductionService production)
 {
+    /// <summary>查询。</summary>
     public Task<List<CellRecordEntity>> QueryAsync(ProductionQuery q) =>
         db.Queryable<CellRecordEntity>()
             .SplitTable(q.From, q.To)
@@ -30,6 +54,7 @@ public sealed class ProductionQueryService(
             .Take(q.Limit)
             .ToListAsync();
 
+    /// <summary>查询NG。</summary>
     public Task<List<NgRecordEntity>> QueryNgAsync(DateTime from, DateTime to, string? cellCode = null) =>
         db.Queryable<NgRecordEntity>()
             .SplitTable(from, to)
@@ -39,6 +64,7 @@ public sealed class ProductionQueryService(
             .Take(5000)
             .ToListAsync();
 
+    /// <summary>每小时。</summary>
     public async Task<List<HourlyOutput>> HourlyAsync(DateTime from, DateTime to)
     {
         var rows = await db.Queryable<CellRecordEntity>().SplitTable(from, to)
@@ -70,6 +96,7 @@ public sealed class ProductionQueryService(
         return new OeeSnapshot(availability, performance, quality, availability * performance * quality, c.Total / (elapsed / 3600));
     }
 
+    /// <summary>导出CSV。</summary>
     public async Task<int> ExportCsvAsync(ProductionQuery q, string path)
     {
         permissions.Demand(Permissions.Production.Export);
@@ -90,8 +117,10 @@ public sealed class ProductionQueryService(
         return rows.Count;
     }
 
+    /// <summary>格式。</summary>
     private static string? Fmt(double? v) => v?.ToString("0.####", CultureInfo.InvariantCulture);
 
+    /// <summary>CSV。</summary>
     private static string Csv(object? v)
     {
         var s = Convert.ToString(v, CultureInfo.InvariantCulture) ?? "";

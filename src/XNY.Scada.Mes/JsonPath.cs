@@ -7,9 +7,11 @@ namespace XNY.Scada.Mes;
 /// <summary>简易 JSON 路径：data.items[0].code</summary>
 public static partial class JsonPath
 {
+    /// <summary>线段正则。</summary>
     [GeneratedRegex(@"^(?<name>[^\[\]]*)(\[(?<idx>\d+)\])*$")]
     private static partial Regex SegmentRegex();
 
+    /// <summary>选中。</summary>
     public static object? Select(JsonElement root, string path)
     {
         var current = root;
@@ -51,6 +53,7 @@ public static partial class JsonPath
         }
     }
 
+    /// <summary>尝试获取属性忽略分支。</summary>
     private static bool TryGetPropertyIgnoreCase(JsonElement obj, string name, out JsonElement value)
     {
         if (obj.TryGetProperty(name, out value)) return true;

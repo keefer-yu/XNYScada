@@ -6,8 +6,10 @@ namespace XNY.Scada.WinForms.Forms;
 /// <summary>登录：账号密码或刷卡（HID 读卡器模拟键盘输入卡号后回车）</summary>
 public sealed class LoginForm : Form
 {
+    /// <summary>绑定。</summary>
     private readonly List<IDisposable> _bindings = [];
 
+    /// <summary>创建登录窗体。</summary>
     public LoginForm(LoginViewModel vm)
     {
         Text = "用户登录";

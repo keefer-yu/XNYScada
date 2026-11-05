@@ -8,8 +8,10 @@ using Xunit;
 
 namespace XNY.Scada.Tests;
 
+/// <summary>核心测试。</summary>
 public class CoreTests
 {
+    /// <summary>测试密码哈希取整触发。</summary>
     [Fact]
     public void PasswordHasher_RoundTrip()
     {
@@ -18,6 +20,7 @@ public class CoreTests
         Assert.False(PasswordHasher.Verify("abc12345", hash));
     }
 
+    /// <summary>测试表达式是否支持变量列表占位符并函数。</summary>
     [Fact]
     public void Expression_SupportsVariablesPlaceholdersAndFunctions()
     {
@@ -28,6 +31,7 @@ public class CoreTests
         Assert.Equal("cell=CELL001 bin=2", ScadaExpression.Render("cell=${Code} bin={Var:Bin}", vars, (k, n) => 2));
     }
 
+    /// <summary>测试分档匹配项条件并表达式。</summary>
     [Fact]
     public void Grading_MatchesConditionsAndExpression()
     {
@@ -38,6 +42,7 @@ public class CoreTests
         Assert.False(GradingService.Match(rule, conditions, new Dictionary<string, object?> { ["Voltage"] = 3.25, ["Capacity"] = 40 }));
     }
 
+    /// <summary>测试MES渲染并解释。</summary>
     [Fact]
     public void Mes_RenderAndInterpret()
     {
@@ -51,6 +56,7 @@ public class CoreTests
         Assert.False(MesClient.Interpret(cfg, 200, "{\"code\":1}").Success);
     }
 
+    /// <summary>测试JSON取整触发次数枚举。</summary>
     [Fact]
     public void Json_RoundTripsEnums()
     {

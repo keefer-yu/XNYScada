@@ -10,6 +10,7 @@ using XNY.Scada.Mes;
 
 namespace XNY.Scada.Flow.Nodes.Builtin;
 
+/// <summary>扫描条码节点。</summary>
 [FlowNode("ScanBarcode", "扫码", "业务", Ports = "ok,ng", Description = "（可选）触发扫码枪后从点位读取条码并校验，失败可重试")]
 [NodeProperty("Tag", "条码点位", Kind = NodePropertyKind.Tag, Required = true, Order = 0)]
 [NodeProperty("TriggerTag", "扫码触发位", Kind = NodePropertyKind.Tag, Description = "可选：写 true 触发扫码", Order = 1)]
@@ -20,8 +21,10 @@ namespace XNY.Scada.Flow.Nodes.Builtin;
 [NodeProperty("MinLength", "最小长度", Kind = NodePropertyKind.Int, Default = "1", Order = 6)]
 public sealed class ScanBarcodeNode : INodeHandler
 {
+    /// <summary>不只读。</summary>
     private static readonly string[] NoRead = ["NOREAD", "ERROR", "NG", "NONE"];
 
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var tag = ctx.Render(ctx.RequireProp("Tag"));
@@ -49,6 +52,7 @@ public sealed class ScanBarcodeNode : INodeHandler
     }
 }
 
+/// <summary>条码检查节点。</summary>
 [FlowNode("BarcodeCheck", "条码校验", "业务", Ports = "ok,ng", Description = "校验格式、长度、重码（已生产过）、已绑定托盘")]
 [NodeProperty("Value", "条码表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "Barcode")]
 [NodeProperty("Regex", "格式正则")]
@@ -57,6 +61,7 @@ public sealed class ScanBarcodeNode : INodeHandler
 [NodeProperty("CheckBound", "校验已绑盘", Kind = NodePropertyKind.Bool, Default = "false")]
 public sealed class BarcodeCheckNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var code = ScadaExpression.ToInvariantString(ctx.EvalProp("Value")).Trim();
@@ -69,6 +74,7 @@ public sealed class BarcodeCheckNode : INodeHandler
         return NodeResult.OkNg(message.Length == 0, message);
     }
 
+    /// <summary>检查。</summary>
     public static string Check(string code, string? regex, int minLength)
     {
         if (code.Length < Math.Max(1, minLength)) return $"条码长度不足: '{code}'";
@@ -77,6 +83,7 @@ public sealed class BarcodeCheckNode : INodeHandler
     }
 }
 
+/// <summary>绑定托盘节点。</summary>
 [FlowNode("BindTray", "电芯绑定托盘", "业务", Ports = "ok,ng", Description = "绑定后输出 TrayCellCount / TrayFull")]
 [NodeProperty("TrayCode", "托盘号表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "TrayCode")]
 [NodeProperty("Position", "位置表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "Position")]
@@ -85,6 +92,7 @@ public sealed class BarcodeCheckNode : INodeHandler
 [NodeProperty("Cols", "托盘列数", Kind = NodePropertyKind.Expression, Default = "{Recipe:TrayCols}")]
 public sealed class BindTrayNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var trays = ctx.Get<ITrayService>();
@@ -99,14 +107,17 @@ public sealed class BindTrayNode : INodeHandler
         return NodeResult.OkNg(r.Success, r.Message);
     }
 
+    /// <summary>转换为整数。</summary>
     internal static int ToInt(object? v, int defaultValue) =>
         v == null || (v is string s && string.IsNullOrWhiteSpace(s)) ? defaultValue : Convert.ToInt32(v, CultureInfo.InvariantCulture);
 }
 
+/// <summary>完成托盘节点。</summary>
 [FlowNode("CompleteTray", "托盘完成", "业务", Description = "标记托盘满盘/完成")]
 [NodeProperty("TrayCode", "托盘号表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "TrayCode")]
 public sealed class CompleteTrayNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         await ctx.Get<ITrayService>().CompleteTrayAsync(ScadaExpression.ToInvariantString(ctx.EvalProp("TrayCode")));
@@ -114,10 +125,12 @@ public sealed class CompleteTrayNode : INodeHandler
     }
 }
 
+/// <summary>加载托盘节点。</summary>
 [FlowNode("LoadTray", "查询托盘电芯", "业务", Ports = "ok,ng", Description = "输出 TrayCells(列表)、TrayCellCount、Cell_{位置} 变量")]
 [NodeProperty("TrayCode", "托盘号表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "TrayCode")]
 public sealed class LoadTrayNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var code = ScadaExpression.ToInvariantString(ctx.EvalProp("TrayCode"));
@@ -130,11 +143,13 @@ public sealed class LoadTrayNode : INodeHandler
     }
 }
 
+/// <summary>解绑托盘节点。</summary>
 [FlowNode("UnbindTray", "托盘解绑", "业务", Description = "Position 为空时整盘解绑，输出 UnboundCount")]
 [NodeProperty("TrayCode", "托盘号表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "TrayCode")]
 [NodeProperty("Position", "位置表达式", Kind = NodePropertyKind.Expression)]
 public sealed class UnbindTrayNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var position = ctx.Prop("Position") == null ? (int?)null : BindTrayNode.ToInt(ctx.EvalProp("Position"), 0);
@@ -144,11 +159,13 @@ public sealed class UnbindTrayNode : INodeHandler
     }
 }
 
+/// <summary>计算分档节点。</summary>
 [FlowNode("CalcGrade", "分档计算", "业务", Ports = "ok,ng", Description = "按当前配方分档规则计算档位，输出 BinNo/BinName/IsNg/NgCode")]
 [NodeProperty("Inputs", "输入数据", Kind = NodePropertyKind.Assignments, Required = true, Description = "Voltage = V\nInternalResistance = IR\nCapacity = Cap")]
 [NodeProperty("RecipeCode", "配方编码", Description = "为空使用当前配方")]
 public sealed class CalcGradeNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var inputs = ctx.EvalAssignments("Inputs");
@@ -163,12 +180,14 @@ public sealed class CalcGradeNode : INodeHandler
     }
 }
 
+/// <summary>NG判定节点。</summary>
 [FlowNode("NgJudge", "NG 判定", "业务", Ports = "ok,ng", Description = "根据 NG 代码映射到 NG 料盒，输出 BoxNo/NgCode")]
 [NodeProperty("NgCode", "NG 代码表达式", Kind = NodePropertyKind.Expression, Required = true, Description = "空或 OK 表示良品")]
 [NodeProperty("MapParam", "料盒映射配方参数", Default = "NgBoxMap", Description = "配方参数，JSON 对象：{\"NG01\":1}")]
 [NodeProperty("DefaultBox", "默认料盒", Kind = NodePropertyKind.Int, Default = "1")]
 public sealed class NgJudgeNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var code = ScadaExpression.ToInvariantString(ctx.EvalProp("NgCode")).Trim();
@@ -187,10 +206,12 @@ public sealed class NgJudgeNode : INodeHandler
     }
 }
 
+/// <summary>保存单元格记录节点。</summary>
 [FlowNode("SaveCellRecord", "保存生产记录", "业务", Description = "已知字段：CellCode TrayCode Position Voltage InternalResistance Capacity BinNo BinName IsOk NgCode，其余写入扩展字段")]
 [NodeProperty("Fields", "字段", Kind = NodePropertyKind.Assignments, Required = true)]
 public sealed class SaveCellRecordNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var f = ctx.EvalAssignments("Fields");
@@ -221,6 +242,7 @@ public sealed class SaveCellRecordNode : INodeHandler
     }
 }
 
+/// <summary>保存NG记录节点。</summary>
 [FlowNode("SaveNgRecord", "保存 NG 记录", "业务")]
 [NodeProperty("CellCode", "电芯码表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "Barcode")]
 [NodeProperty("NgCode", "NG 代码表达式", Kind = NodePropertyKind.Expression, Required = true, Default = "NgCode")]
@@ -228,6 +250,7 @@ public sealed class SaveCellRecordNode : INodeHandler
 [NodeProperty("BoxNo", "料盒表达式", Kind = NodePropertyKind.Expression, Default = "BoxNo")]
 public sealed class SaveNgRecordNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var record = new NgRecordEntity
@@ -243,12 +266,14 @@ public sealed class SaveNgRecordNode : INodeHandler
     }
 }
 
+/// <summary>MES调用节点。</summary>
 [FlowNode("MesCall", "调用 MES", "业务", Ports = "ok,ng,offline", Description = "调用配置的 MES 接口；输出 {前缀}Success/{前缀}Message 与响应映射字段")]
 [NodeProperty("InterfaceCode", "接口编码", Kind = NodePropertyKind.MesRef, Required = true)]
 [NodeProperty("Args", "参数", Kind = NodePropertyKind.Assignments, Description = "模板变量 = 表达式；为空时传入全部流程变量")]
 [NodeProperty("OutputPrefix", "输出变量前缀", Default = "Mes")]
 public sealed class MesCallNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var args = string.IsNullOrWhiteSpace(ctx.Prop("Args"))
@@ -265,12 +290,14 @@ public sealed class MesCallNode : INodeHandler
     }
 }
 
+/// <summary>触发报警节点。</summary>
 [FlowNode("RaiseAlarm", "触发报警", "业务")]
 [NodeProperty("Source", "报警源", Required = true, Description = "同一报警源未清除前不重复报警")]
 [NodeProperty("Message", "报警内容模板", Kind = NodePropertyKind.Template, Required = true)]
 [NodeProperty("Level", "级别", Kind = NodePropertyKind.Enum, Choices = "Info,Warning,Error,Critical", Default = "Warning")]
 public sealed class RaiseAlarmNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var level = Enum.TryParse<AlarmLevel>(ctx.Prop("Level"), true, out var l) ? l : AlarmLevel.Warning;
@@ -279,10 +306,12 @@ public sealed class RaiseAlarmNode : INodeHandler
     }
 }
 
+/// <summary>清除报警节点。</summary>
 [FlowNode("ClearAlarm", "清除报警", "业务")]
 [NodeProperty("Source", "报警源", Required = true)]
 public sealed class ClearAlarmNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         await ctx.Get<IAlarmService>().ClearAsync(ctx.Render(ctx.RequireProp("Source")));
@@ -290,6 +319,7 @@ public sealed class ClearAlarmNode : INodeHandler
     }
 }
 
+/// <summary>确认节点。</summary>
 [FlowNode("Confirm", "人工确认", "业务", Ports = "yes,no", Description = "弹窗等待操作员确认，超时取默认结果")]
 [NodeProperty("Title", "标题", Default = "请确认")]
 [NodeProperty("Message", "内容模板", Kind = NodePropertyKind.Template, Required = true)]
@@ -297,6 +327,7 @@ public sealed class ClearAlarmNode : INodeHandler
 [NodeProperty("Default", "超时默认", Kind = NodePropertyKind.Bool, Default = "false")]
 public sealed class ConfirmNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var ui = ctx.TryGet<IUserInteraction>() ?? new NullUserInteraction();

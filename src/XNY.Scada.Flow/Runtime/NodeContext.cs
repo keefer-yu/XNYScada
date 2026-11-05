@@ -12,8 +12,10 @@ namespace XNY.Scada.Flow.Runtime;
 /// <summary>节点执行上下文：访问变量、表达式求值、服务</summary>
 public sealed class NodeContext
 {
+    /// <summary>存储。</summary>
     private readonly FlowVariableStore _store;
 
+    /// <summary>创建节点上下文。</summary>
     internal NodeContext(FlowInstance instance, NodeDef node, IServiceProvider services, FlowVariableStore store, IFlowRunner runner, ILogger logger)
     {
         Instance = instance;
@@ -24,28 +26,39 @@ public sealed class NodeContext
         Logger = logger;
     }
 
+    /// <summary>实例。</summary>
     public FlowInstance Instance { get; }
 
+    /// <summary>节点。</summary>
     public NodeDef Node { get; }
 
+    /// <summary>服务。</summary>
     public IServiceProvider Services { get; }
 
+    /// <summary>运行器。</summary>
     public IFlowRunner Runner { get; }
 
+    /// <summary>日志。</summary>
     public ILogger Logger { get; }
 
+    /// <summary>点位数量。</summary>
     public ITagService Tags => Services.GetRequiredService<ITagService>();
 
+    /// <summary>获取。</summary>
     public T Get<T>() where T : notnull => Services.GetRequiredService<T>();
 
+    /// <summary>尝试获取。</summary>
     public T? TryGet<T>() => Services.GetService<T>();
 
     // ----- 属性读取 -----
 
+    /// <summary>属性。</summary>
     public string? Prop(string key) => Node.Get(key);
 
+    /// <summary>要求属性。</summary>
     public string RequireProp(string key) => Node.Get(key) ?? throw new FlowException($"节点 {Node.DisplayName} 缺少属性 {key}");
 
+    /// <summary>属性整数。</summary>
     public int PropInt(string key, int defaultValue)
     {
         var v = Prop(key);
@@ -54,6 +67,7 @@ public sealed class NodeContext
         return Convert.ToInt32(Evaluate(v), CultureInfo.InvariantCulture);
     }
 
+    /// <summary>属性布尔。</summary>
     public bool PropBool(string key, bool defaultValue)
     {
         var v = Prop(key);
@@ -77,6 +91,7 @@ public sealed class NodeContext
         return result;
     }
 
+    /// <summary>解析赋值。</summary>
     public static IEnumerable<(string Name, string Expression)> ParseAssignments(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) yield break;
@@ -92,8 +107,10 @@ public sealed class NodeContext
 
     // ----- 变量 -----
 
+    /// <summary>获取变量。</summary>
     public object? GetVar(string name) => Instance.Variables.TryGetValue(name, out var v) ? v : null;
 
+    /// <summary>设置变量。</summary>
     public void SetVar(string name, object? value, VariableScope scope = VariableScope.Instance)
     {
         switch (scope)
@@ -112,12 +129,16 @@ public sealed class NodeContext
 
     // ----- 表达式 -----
 
+    /// <summary>求值。</summary>
     public object? Evaluate(string expression) => ScadaExpression.Evaluate(expression, Instance.Variables, Resolve);
 
+    /// <summary>求值布尔。</summary>
     public bool EvaluateBool(string expression) => ScadaExpression.EvaluateBool(expression, Instance.Variables, Resolve);
 
+    /// <summary>渲染。</summary>
     public string Render(string template) => ScadaExpression.Render(template, Instance.Variables, Resolve);
 
+    /// <summary>解析。</summary>
     public object? Resolve(string kind, string name)
     {
         switch (kind.ToLowerInvariant())
@@ -151,6 +172,7 @@ public sealed class NodeContext
 
     // ----- 点位读写辅助 -----
 
+    /// <summary>读取标记。</summary>
     public async Task<object?> ReadTagAsync(string tag, bool fromDevice, CancellationToken ct)
     {
         if (!fromDevice) return Tags.GetValue(tag)?.Value;
@@ -159,6 +181,7 @@ public sealed class NodeContext
         return r.Value;
     }
 
+    /// <summary>写入标记。</summary>
     public async Task WriteTagAsync(string tag, object? value, CancellationToken ct)
     {
         var r = await Tags.WriteAsync(tag, value, ct);

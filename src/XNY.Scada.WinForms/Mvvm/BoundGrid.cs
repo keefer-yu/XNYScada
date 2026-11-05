@@ -6,31 +6,50 @@ using System.Windows.Input;
 namespace XNY.Scada.WinForms.Mvvm;
 
 /// <summary>表格列定义。Width 为 0 表示填充剩余宽度；Property 可用 "User.Name" 形式的嵌套路径（只读）</summary>
+/// <param name="Header">标题。</param>
+/// <param name="Property">属性。</param>
+/// <param name="Width">宽度。</param>
+/// <param name="Format">格式。</param>
 public sealed record Col(string Header, string Property, int Width = 100, string? Format = null)
 {
+    /// <summary>是否可编辑。</summary>
     public bool Editable { get; init; }
+    /// <summary>填充粗细。</summary>
     public float FillWeight { get; init; } = 100;
+    /// <summary>可选值。</summary>
     public IList? Choices { get; init; }
+    /// <summary>值成员。</summary>
     public string? ValueMember { get; init; }
+    /// <summary>显示成员。</summary>
     public string? DisplayMember { get; init; }
+    /// <summary>绑定的命令。</summary>
     public ICommand? Command { get; init; }
 
+    /// <summary>填满。</summary>
     public static Col Fill(string header, string property, float weight = 100) => new(header, property, 0) { FillWeight = weight };
 
+    /// <summary>编辑。</summary>
     public static Col Edit(string header, string property, int width = 100) => new(header, property, width) { Editable = true };
 
+    /// <summary>选项。</summary>
     public static Col Choice(string header, string property, IList choices, int width = 100) =>
         new(header, property, width) { Editable = true, Choices = choices };
 
+    /// <summary>键。</summary>
     public static Col Button(string text, ICommand command, int width = 60) => new(text, "", width) { Command = command };
 }
 
+/// <summary>绑定网格。</summary>
 public sealed class BoundGrid<T> : DataGridView where T : class
 {
+    /// <summary>列表。</summary>
     private readonly ObservableBindingList<T> _list;
+    /// <summary>路径列。</summary>
     private readonly Dictionary<int, string> _pathColumns = new();
+    /// <summary>行颜色。</summary>
     private Func<T, Color?>? _rowColor;
 
+    /// <summary>创建绑定网格。</summary>
     public BoundGrid(ObservableCollection<T> items, bool editable, params Col[] columns)
     {
         _list = new ObservableBindingList<T>(items);
@@ -77,10 +96,13 @@ public sealed class BoundGrid<T> : DataGridView where T : class
         };
     }
 
+    /// <summary>当前值。</summary>
     public T? Current => CurrentRow?.DataBoundItem as T;
 
+    /// <summary>选中绑定。</summary>
     private Delegate? _selectedBinding;
 
+    /// <summary>创建列。</summary>
     private DataGridViewColumn CreateColumn(Col c, bool editable)
     {
         DataGridViewColumn col;
@@ -131,6 +153,7 @@ public sealed class BoundGrid<T> : DataGridView where T : class
         return col;
     }
 
+    /// <summary>处理单元格格式。</summary>
     private void OnCellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
     {
         if (e.RowIndex < 0 || e.RowIndex >= _list.Count) return;
@@ -144,6 +167,7 @@ public sealed class BoundGrid<T> : DataGridView where T : class
         if (_rowColor?.Invoke(_list[e.RowIndex]) is { } color && e.CellStyle != null) e.CellStyle.ForeColor = color;
     }
 
+    /// <summary>处理单元格内容击。</summary>
     private void OnCellContentClick(object? sender, DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0 || e.RowIndex >= _list.Count || Columns[e.ColumnIndex].Tag is not ICommand cmd) return;

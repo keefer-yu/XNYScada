@@ -13,12 +13,19 @@ namespace XNY.Scada.Application.Production;
 /// </summary>
 public sealed class GradingService : IGradingService
 {
+    /// <summary>已编译规则。</summary>
+    /// <param name="Rule">规则。</param>
+    /// <param name="Conditions">条件。</param>
     private sealed record CompiledRule(GradingRuleEntity Rule, IReadOnlyList<GradingCondition> Conditions);
 
+    /// <summary>数据库。</summary>
     private readonly ISqlSugarClient _db;
+    /// <summary>配方。</summary>
     private readonly RecipeService _recipes;
+    /// <summary>缓存。</summary>
     private readonly ConcurrentDictionary<string, IReadOnlyList<CompiledRule>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>创建分档服务。</summary>
     public GradingService(ISqlSugarClient db, RecipeService recipes)
     {
         _db = db;
@@ -27,6 +34,7 @@ public sealed class GradingService : IGradingService
         _recipes.CurrentRecipeChanged += (_, _) => _cache.Clear();
     }
 
+    /// <summary>分档。</summary>
     public async Task<GradeResult> GradeAsync(IReadOnlyDictionary<string, object?> values, string? recipeCode = null)
     {
         recipeCode ??= _recipes.Current?.Code;
@@ -44,9 +52,11 @@ public sealed class GradingService : IGradingService
         return new GradeResult(false, 0, "", true, "OUT_OF_RANGE", "数据不在任何档位范围内");
     }
 
+    /// <summary>匹配。</summary>
     public static bool Match(GradingRuleEntity rule, IReadOnlyList<GradingCondition> conditions, IReadOnlyDictionary<string, object?> values) =>
         Match(new CompiledRule(rule, conditions), values);
 
+    /// <summary>匹配。</summary>
     private static bool Match(CompiledRule cr, IReadOnlyDictionary<string, object?> values)
     {
         foreach (var c in cr.Conditions)
@@ -64,6 +74,7 @@ public sealed class GradingService : IGradingService
         return true;
     }
 
+    /// <summary>获取规则。</summary>
     private async Task<IReadOnlyList<CompiledRule>> GetRulesAsync(string recipeCode)
     {
         if (_cache.TryGetValue(recipeCode, out var cached)) return cached;

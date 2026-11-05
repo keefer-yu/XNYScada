@@ -4,8 +4,13 @@ using XNY.Scada.Domain.Entities;
 
 namespace XNY.Scada.Data;
 
+/// <summary>数据库初始化器。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="options">配置项。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class DatabaseInitializer(ISqlSugarClient db, DatabaseOptions options, ILogger<DatabaseInitializer> logger)
 {
+    /// <summary>需要建表的实体类型。</summary>
     public static readonly Type[] EntityTypes =
     [
         typeof(DeviceEntity), typeof(TagGroupEntity), typeof(TagEntity),
@@ -17,8 +22,10 @@ public sealed class DatabaseInitializer(ISqlSugarClient db, DatabaseOptions opti
         typeof(MesInterfaceEntity), typeof(MesCallLogEntity), typeof(MesOutboxEntity)
     ];
 
+    /// <summary>按日分表的实体类型。</summary>
     public static readonly Type[] SplitEntityTypes = [typeof(CellRecordEntity), typeof(NgRecordEntity)];
 
+    /// <summary>首次启动写入的系统参数。</summary>
     public static readonly Dictionary<string, (string Value, string Group, string Description)> DefaultParams = new()
     {
         ["MachineType"] = ("Grading", "Machine", "机型：TrayAssembly/TrayDisassembly/Grading/NgSorting"),
@@ -29,6 +36,7 @@ public sealed class DatabaseInitializer(ISqlSugarClient db, DatabaseOptions opti
         ["AutoLogoutMinutes"] = ("15", "Security", "无操作自动登出（分钟），0 不登出")
     };
 
+    /// <summary>初始化。</summary>
     public void Initialize()
     {
         logger.LogInformation("初始化数据库结构 ({DbType})", options.DbType);

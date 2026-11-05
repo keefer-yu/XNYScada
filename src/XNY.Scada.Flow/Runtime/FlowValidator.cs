@@ -3,13 +3,20 @@ using XNY.Scada.Flow.Nodes;
 
 namespace XNY.Scada.Flow.Runtime;
 
+/// <summary>校验问题。</summary>
+/// <param name="IsError">是否错误。</param>
+/// <param name="NodeId">节点标识。</param>
+/// <param name="Message">消息。</param>
 public sealed record ValidationIssue(bool IsError, string? NodeId, string Message)
 {
+    /// <summary>转换为字符串。</summary>
     public override string ToString() => $"{(IsError ? "错误" : "警告")}{(NodeId == null ? "" : $" [{NodeId}]")}: {Message}";
 }
 
+/// <summary>流校验器。</summary>
 public static class FlowValidator
 {
+    /// <summary>校验。</summary>
     public static IReadOnlyList<ValidationIssue> Validate(FlowDocument doc, INodeRegistry registry)
     {
         var issues = new List<ValidationIssue>();

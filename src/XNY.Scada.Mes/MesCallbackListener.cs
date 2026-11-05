@@ -7,10 +7,14 @@ using XNY.Scada.Domain;
 namespace XNY.Scada.Mes;
 
 /// <summary>接收 MES 主动推送（如工单下发、托盘信息），转发为流程触发事件</summary>
+/// <param name="options">配置项。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class MesCallbackListener(MesOptions options, ILogger<MesCallbackListener> logger) : BackgroundService
 {
+    /// <summary>回调已接收发生变化时触发。</summary>
     public event EventHandler<MesCallbackEventArgs>? CallbackReceived;
 
+    /// <summary>执行。</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(options.CallbackPrefix)) return;
@@ -42,6 +46,7 @@ public sealed class MesCallbackListener(MesOptions options, ILogger<MesCallbackL
         }
     }
 
+    /// <summary>处理。</summary>
     private async Task HandleAsync(HttpListenerContext ctx)
     {
         try

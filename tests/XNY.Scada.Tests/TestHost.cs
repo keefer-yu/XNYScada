@@ -10,20 +10,26 @@ namespace XNY.Scada.Tests;
 /// <summary>基于临时 SQLite 与模拟 PLC 的完整运行时</summary>
 public sealed class TestHost : IAsyncDisposable
 {
+    /// <summary>目录。</summary>
     private readonly string _dir;
 
+    /// <summary>创建测试宿主。</summary>
     private TestHost(IHost host, string dir)
     {
         Host = host;
         _dir = dir;
     }
 
+    /// <summary>宿主。</summary>
     public IHost Host { get; }
 
+    /// <summary>服务。</summary>
     public IServiceProvider Services => Host.Services;
 
+    /// <summary>获取。</summary>
     public T Get<T>() where T : notnull => Services.GetRequiredService<T>();
 
+    /// <summary>启动。</summary>
     public static async Task<TestHost> StartAsync(bool login = true, Action<IServiceCollection>? configure = null, bool autoImportTemplate = false)
     {
         var dir = Path.Combine(Path.GetTempPath(), "xnyscada-tests", Guid.NewGuid().ToString("N"));
@@ -54,6 +60,7 @@ public sealed class TestHost : IAsyncDisposable
         return th;
     }
 
+    /// <summary>等待截止。</summary>
     public async Task<bool> WaitUntilAsync(Func<bool> condition, int timeoutMs = 5000)
     {
         var deadline = DateTime.Now.AddMilliseconds(timeoutMs);
@@ -65,8 +72,10 @@ public sealed class TestHost : IAsyncDisposable
         return condition();
     }
 
+    /// <summary>标记。</summary>
     public object? Tag(string name) => Get<ITagService>().GetValue(name)?.Value;
 
+    /// <summary>释放资源。</summary>
     public async ValueTask DisposeAsync()
     {
         await Host.StopAsync();

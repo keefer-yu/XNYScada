@@ -6,8 +6,10 @@ using SqlSugar;
 
 namespace XNY.Scada.Data;
 
+/// <summary>数据服务集合的扩展方法。</summary>
 public static class DataServiceCollectionExtensions
 {
+    /// <summary>添加SCADA数据。</summary>
     public static IServiceCollection AddScadaData(this IServiceCollection services, IConfiguration configuration)
     {
         var options = configuration.GetSection(DatabaseOptions.Section).Get<DatabaseOptions>() ?? new DatabaseOptions();
@@ -18,6 +20,7 @@ public static class DataServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>创建客户区。</summary>
     public static SqlSugarScope CreateClient(DatabaseOptions options, ILogger? logger = null)
     {
         var dbType = Enum.Parse<DbType>(options.DbType, ignoreCase: true);
@@ -66,6 +69,7 @@ public static class DataServiceCollectionExtensions
         });
     }
 
+    /// <summary>确保SQLite目录。</summary>
     private static string EnsureSqliteDirectory(string connectionString)
     {
         var builder = new System.Data.Common.DbConnectionStringBuilder { ConnectionString = connectionString };

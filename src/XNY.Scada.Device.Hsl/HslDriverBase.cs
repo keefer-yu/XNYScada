@@ -5,22 +5,30 @@ using XNY.Scada.Domain;
 
 namespace XNY.Scada.Device.Hsl;
 
+/// <summary>HSL驱动基类。</summary>
 [DriverOption("Ip", "IP 地址", Default = "192.168.0.10", Order = 0)]
 [DriverOption("ConnectTimeoutMs", "连接超时(ms)", Type = DriverOptionType.Int, Default = "3000", Order = 90)]
 [DriverOption("ReceiveTimeoutMs", "接收超时(ms)", Type = DriverOptionType.Int, Default = "3000", Order = 91)]
 public abstract class HslDriverBase : PlcDriverBase
 {
+    /// <summary>设备。</summary>
     private DeviceTcpNet? _device;
+    /// <summary>连接。</summary>
     private volatile bool _connected;
 
+    /// <summary>是否连接。</summary>
     public override bool IsConnected => _connected;
 
+    /// <summary>设备。</summary>
     protected DeviceTcpNet Device => _device ?? throw new InvalidOperationException("驱动未连接");
 
+    /// <summary>IP 地址。</summary>
     protected string Ip => GetOption("Ip", "127.0.0.1");
 
+    /// <summary>创建设备。</summary>
     protected abstract DeviceTcpNet CreateDevice();
 
+    /// <summary>连接。</summary>
     public override Task<DeviceResult> ConnectAsync(CancellationToken ct)
     {
         return Task.Run(() =>
@@ -35,6 +43,7 @@ public abstract class HslDriverBase : PlcDriverBase
         }, ct);
     }
 
+    /// <summary>断开。</summary>
     public override Task DisconnectAsync()
     {
         _connected = false;
@@ -43,6 +52,7 @@ public abstract class HslDriverBase : PlcDriverBase
         return Task.CompletedTask;
     }
 
+    /// <summary>读取核心。</summary>
     protected override DeviceResult<object?> ReadCore(TagDefinition tag)
     {
         IReadWriteNet d = Device;
@@ -62,6 +72,7 @@ public abstract class HslDriverBase : PlcDriverBase
         };
     }
 
+    /// <summary>写入核心。</summary>
     protected override DeviceResult WriteCore(TagDefinition tag, object raw)
     {
         IReadWriteNet d = Device;
@@ -83,9 +94,11 @@ public abstract class HslDriverBase : PlcDriverBase
         return r.IsSuccess ? DeviceResult.Ok() : DeviceResult.Fail(r.Message);
     }
 
+    /// <summary>写入字符串。</summary>
     protected virtual OperateResult WriteString(IReadWriteNet d, TagDefinition tag, string value) =>
         tag.Length > 0 ? d.Write(tag.Address, value, tag.Length) : d.Write(tag.Address, value);
 
+    /// <summary>映射。</summary>
     private DeviceResult<object?> Map<T>(OperateResult<T> r)
     {
         if (r.IsSuccess) return DeviceResult<object?>.Ok(r.Content);
@@ -93,6 +106,7 @@ public abstract class HslDriverBase : PlcDriverBase
         return DeviceResult<object?>.Fail(r.Message);
     }
 
+    /// <summary>映射字符串。</summary>
     private DeviceResult<object?> MapString(OperateResult<string> r)
     {
         if (r.IsSuccess) return DeviceResult<object?>.Ok(r.Content?.TrimEnd('\0', ' '));

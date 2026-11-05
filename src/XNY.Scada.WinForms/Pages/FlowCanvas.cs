@@ -8,19 +8,31 @@ namespace XNY.Scada.WinForms.Pages;
 /// <summary>GDI+ 流程图：与 WPF 画布共享同一套节点/连线坐标模型</summary>
 internal sealed class FlowCanvas : Panel
 {
+    /// <summary>节点W。</summary>
     private const float NodeW = (float)FlowNodeViewModel.Width;
+    /// <summary>节点H。</summary>
     private const float NodeH = (float)FlowNodeViewModel.Height;
+    /// <summary>端口号半径。</summary>
     private const float PortRadius = 6;
 
+    /// <summary>视图模型。</summary>
     private readonly FlowDesignerViewModel _vm;
+    /// <summary>已订阅。</summary>
     private readonly HashSet<INotifyPropertyChanged> _subscribed = [];
+    /// <summary>缩放。</summary>
     private float _zoom = 1f;
+    /// <summary>拖动节点。</summary>
     private FlowNodeViewModel? _dragNode;
+    /// <summary>拖动偏移。</summary>
     private PointF _dragOffset;
+    /// <summary>连接从。</summary>
     private FlowNodeViewModel? _connectFrom;
+    /// <summary>连接端口号。</summary>
     private string? _connectPort;
+    /// <summary>连接点。</summary>
     private PointF _connectPoint;
 
+    /// <summary>创建流画布。</summary>
     public FlowCanvas(FlowDesignerViewModel vm)
     {
         _vm = vm;
@@ -39,6 +51,7 @@ internal sealed class FlowCanvas : Panel
         UpdateSize();
     }
 
+    /// <summary>缩放。</summary>
     public float Zoom
     {
         get => _zoom;
@@ -50,14 +63,17 @@ internal sealed class FlowCanvas : Panel
         }
     }
 
+    /// <summary>视图中。</summary>
     public PointF ViewCenter()
     {
         var p = ToModel(new Point(ClientSize.Width / 2, ClientSize.Height / 2));
         return new PointF(Math.Max(0, p.X - NodeW / 2), Math.Max(0, p.Y - NodeH / 2));
     }
 
+    /// <summary>更新大小。</summary>
     private void UpdateSize() => AutoScrollMinSize = new Size((int)(_vm.CanvasWidth * _zoom), (int)(_vm.CanvasHeight * _zoom));
 
+    /// <summary>重新订阅。</summary>
     private void Resubscribe()
     {
         var current = _vm.Nodes.Cast<INotifyPropertyChanged>().Concat(_vm.Edges).ToHashSet();
@@ -74,14 +90,19 @@ internal sealed class FlowCanvas : Panel
         Invalidate();
     }
 
+    /// <summary>当项变化时更新关联状态。</summary>
     private void OnItemChanged(object? sender, PropertyChangedEventArgs e) => Invalidate();
 
+    /// <summary>转换为型号。</summary>
     private PointF ToModel(Point p) => new((p.X - AutoScrollPosition.X) / _zoom, (p.Y - AutoScrollPosition.Y) / _zoom);
 
+    /// <summary>端口号中。</summary>
     private static PointF PortCenter(FlowNodeViewModel n, string port) => new((float)(n.X + n.PortOffset(port)), (float)n.Y + NodeH);
 
+    /// <summary>节点矩形。</summary>
     private static RectangleF NodeRect(FlowNodeViewModel n) => new((float)n.X, (float)n.Y, NodeW, NodeH);
 
+    /// <summary>贝塞尔。</summary>
     private static PointF[] Bezier(FlowEdgeViewModel e)
     {
         var dy = (float)Math.Max(40, Math.Abs(e.Y2 - e.Y1) / 2);
@@ -92,6 +113,7 @@ internal sealed class FlowCanvas : Panel
         ];
     }
 
+    /// <summary>分类颜色。</summary>
     private static Color CategoryColor(string category) => category switch
     {
         "逻辑" => Color.FromArgb(0x5A, 0x67, 0xD8),
@@ -103,6 +125,7 @@ internal sealed class FlowCanvas : Panel
 
     // ---------------- 绘制 ----------------
 
+    /// <summary>处理绘制。</summary>
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -137,6 +160,7 @@ internal sealed class FlowCanvas : Panel
         }
     }
 
+    /// <summary>绘制边。</summary>
     private static void DrawEdge(Graphics g, FlowEdgeViewModel edge, Font font)
     {
         var pts = Bezier(edge);
@@ -151,6 +175,7 @@ internal sealed class FlowCanvas : Panel
         g.DrawString(label, font, Brushes.DimGray, mid);
     }
 
+    /// <summary>绘制节点。</summary>
     private void DrawNode(Graphics g, FlowNodeViewModel node, Font small)
     {
         var r = NodeRect(node);
@@ -201,6 +226,7 @@ internal sealed class FlowCanvas : Panel
         }
     }
 
+    /// <summary>四舍五入矩形。</summary>
     private static GraphicsPath RoundRect(RectangleF r, float radius)
     {
         var d = radius * 2;
@@ -215,6 +241,7 @@ internal sealed class FlowCanvas : Panel
 
     // ---------------- 交互 ----------------
 
+    /// <summary>命中测试端口号。</summary>
     private (FlowNodeViewModel Node, string Port)? HitPort(PointF p)
     {
         foreach (var n in _vm.Nodes.Reverse())
@@ -228,8 +255,10 @@ internal sealed class FlowCanvas : Panel
         return null;
     }
 
+    /// <summary>命中测试节点。</summary>
     private FlowNodeViewModel? HitNode(PointF p) => _vm.Nodes.Reverse().FirstOrDefault(n => NodeRect(n).Contains(p));
 
+    /// <summary>命中测试边。</summary>
     private FlowEdgeViewModel? HitEdge(PointF p)
     {
         foreach (var e in _vm.Edges)
@@ -247,6 +276,7 @@ internal sealed class FlowCanvas : Panel
         return null;
     }
 
+    /// <summary>处理鼠标下。</summary>
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
@@ -282,6 +312,7 @@ internal sealed class FlowCanvas : Panel
         _vm.SelectedEdge = null;
     }
 
+    /// <summary>处理鼠标移动。</summary>
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
@@ -301,6 +332,7 @@ internal sealed class FlowCanvas : Panel
         }
     }
 
+    /// <summary>处理鼠标上。</summary>
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
@@ -319,6 +351,7 @@ internal sealed class FlowCanvas : Panel
         }
     }
 
+    /// <summary>处理鼠标滚轮。</summary>
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         if (ModifierKeys.HasFlag(Keys.Control))
@@ -329,12 +362,14 @@ internal sealed class FlowCanvas : Panel
         base.OnMouseWheel(e);
     }
 
+    /// <summary>处理键下。</summary>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
         if (e.KeyCode == Keys.Delete) Bind.Execute(_vm.DeleteSelectedCommand);
     }
 
+    /// <summary>处理滚动。</summary>
     protected override void OnScroll(ScrollEventArgs se)
     {
         base.OnScroll(se);

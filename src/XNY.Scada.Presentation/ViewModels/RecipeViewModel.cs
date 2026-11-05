@@ -12,15 +12,24 @@ namespace XNY.Scada.Presentation.ViewModels;
 /// <summary>分档规则行，条件以文本编辑：Voltage:3.2~3.3; InternalResistance:~0.5</summary>
 public sealed partial class GradingRuleRow : ObservableObject
 {
+    /// <summary>档位不。</summary>
     [ObservableProperty] private int _binNo;
+    /// <summary>档位名称。</summary>
     [ObservableProperty] private string _binName = "";
+    /// <summary>优先级。</summary>
     [ObservableProperty] private int _priority;
+    /// <summary>条件。</summary>
     [ObservableProperty] private string _conditions = "";
+    /// <summary>表达式。</summary>
     [ObservableProperty] private string? _expression;
+    /// <summary>料盒容量。</summary>
     [ObservableProperty] private int _boxCapacity;
+    /// <summary>是否NG。</summary>
     [ObservableProperty] private bool _isNg;
+    /// <summary>NG代码。</summary>
     [ObservableProperty] private string? _ngCode;
 
+    /// <summary>起点节点。</summary>
     public static GradingRuleRow From(GradingRuleEntity e) => new()
     {
         BinNo = e.BinNo,
@@ -33,6 +42,7 @@ public sealed partial class GradingRuleRow : ObservableObject
         NgCode = e.NgCode
     };
 
+    /// <summary>转换为实体。</summary>
     public GradingRuleEntity ToEntity() => new()
     {
         BinNo = BinNo,
@@ -45,11 +55,14 @@ public sealed partial class GradingRuleRow : ObservableObject
         NgCode = string.IsNullOrWhiteSpace(NgCode) ? null : NgCode
     };
 
+    /// <summary>格式化条件。</summary>
     public static string FormatConditions(IEnumerable<GradingCondition> list) =>
         string.Join("; ", list.Select(c => $"{c.Field}:{Fmt(c.Min)}~{Fmt(c.Max)}"));
 
+    /// <summary>格式。</summary>
     private static string Fmt(double? v) => v?.ToString(CultureInfo.InvariantCulture) ?? "";
 
+    /// <summary>解析条件。</summary>
     public static List<GradingCondition> ParseConditions(string? text)
     {
         var list = new List<GradingCondition>();
@@ -66,6 +79,7 @@ public sealed partial class GradingRuleRow : ObservableObject
         return list;
     }
 
+    /// <summary>解析编号。</summary>
     private static double? ParseNum(string s, string part)
     {
         s = s.Trim();
@@ -74,16 +88,22 @@ public sealed partial class GradingRuleRow : ObservableObject
     }
 }
 
+/// <summary>配方参数行。</summary>
 public sealed partial class RecipeParamRow : ObservableObject
 {
+    /// <summary>配方参数行名称。</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>配方参数行值。</summary>
     [ObservableProperty] private string _value = "";
 }
 
+/// <summary>配方页面的视图模型。</summary>
 public sealed partial class RecipeViewModel : ViewModelBase
 {
+    /// <summary>服务。</summary>
     private readonly RecipeService _service;
 
+    /// <summary>创建配方视图模型。</summary>
     public RecipeViewModel(ViewModelContext context, RecipeService service) : base(context)
     {
         _service = service;
@@ -106,36 +126,59 @@ public sealed partial class RecipeViewModel : ViewModelBase
         RemoveParamCommand = Secured<RecipeParamRow>(Permissions.Recipe.Edit, p => { if (p != null) Params.Remove(p); return Task.CompletedTask; });
     }
 
+    /// <summary>标题。</summary>
     public override string Title => "配方管理";
 
+    /// <summary>配方数量。</summary>
     public ObservableCollection<RecipeEntity> Recipes { get; } = [];
+    /// <summary>规则。</summary>
     public ObservableCollection<GradingRuleRow> Rules { get; } = [];
+    /// <summary>参数。</summary>
     public ObservableCollection<RecipeParamRow> Params { get; } = [];
 
+    /// <summary>选中。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CopyCommand), nameof(SaveCommand), nameof(DeleteCommand), nameof(SubmitCommand), nameof(ApproveCommand), nameof(ActivateCommand))]
     private RecipeEntity? _selected;
 
+    /// <summary>代码。</summary>
     [ObservableProperty] private string _code = "";
+    /// <summary>配方名称。</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>产品型号。</summary>
     [ObservableProperty] private string _productModel = "";
+    /// <summary>状态文本。</summary>
     [ObservableProperty] private string _statusText = "";
+    /// <summary>当前配方。</summary>
     [ObservableProperty] private string _currentRecipe = "";
 
+    /// <summary>新命令。</summary>
     public IAsyncRelayCommand NewCommand { get; }
+    /// <summary>复制命令。</summary>
     public IAsyncRelayCommand CopyCommand { get; }
+    /// <summary>保存命令。</summary>
     public IAsyncRelayCommand SaveCommand { get; }
+    /// <summary>删除命令。</summary>
     public IAsyncRelayCommand DeleteCommand { get; }
+    /// <summary>提交命令。</summary>
     public IAsyncRelayCommand SubmitCommand { get; }
+    /// <summary>审批命令。</summary>
     public IAsyncRelayCommand ApproveCommand { get; }
+    /// <summary>激活命令。</summary>
     public IAsyncRelayCommand ActivateCommand { get; }
+    /// <summary>添加规则命令。</summary>
     public IAsyncRelayCommand AddRuleCommand { get; }
+    /// <summary>移除规则命令。</summary>
     public IAsyncRelayCommand<GradingRuleRow> RemoveRuleCommand { get; }
+    /// <summary>添加参数命令。</summary>
     public IAsyncRelayCommand AddParamCommand { get; }
+    /// <summary>移除参数命令。</summary>
     public IAsyncRelayCommand<RecipeParamRow> RemoveParamCommand { get; }
 
+    /// <summary>处理激活。</summary>
     protected override Task OnActivatedAsync() => ReloadListAsync();
 
+    /// <summary>重新加载列表。</summary>
     private async Task ReloadListAsync()
     {
         var id = Selected?.Id;
@@ -144,8 +187,10 @@ public sealed partial class RecipeViewModel : ViewModelBase
         Selected = Recipes.FirstOrDefault(r => r.Id == id) ?? Recipes.FirstOrDefault(r => r.IsActive) ?? Recipes.FirstOrDefault();
     }
 
+    /// <summary>当当前选中项变化时更新关联状态。</summary>
     partial void OnSelectedChanged(RecipeEntity? value) => _ = RunAsync(() => LoadDetailAsync(value));
 
+    /// <summary>加载详情。</summary>
     private async Task LoadDetailAsync(RecipeEntity? r)
     {
         Code = r?.Code ?? "";
@@ -162,12 +207,14 @@ public sealed partial class RecipeViewModel : ViewModelBase
         Replace(Rules, r == null || r.Id == 0 ? [] : (await _service.GetRulesAsync(r.Id)).Select(GradingRuleRow.From));
     }
 
+    /// <summary>新建。</summary>
     private Task NewAsync()
     {
         Selected = new RecipeEntity { Code = $"R{DateTime.Now:yyMMddHHmm}", Name = "新配方" };
         return Task.CompletedTask;
     }
 
+    /// <summary>复制。</summary>
     private Task CopyAsync()
     {
         if (Selected == null) return Task.CompletedTask;
@@ -179,6 +226,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    /// <summary>构建参数JSON。</summary>
     private string BuildParamsJson()
     {
         var dict = new Dictionary<string, object?>();
@@ -190,6 +238,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         return Json.Serialize(dict);
     }
 
+    /// <summary>保存。</summary>
     private async Task SaveAsync()
     {
         if (Selected == null) return;
@@ -206,6 +255,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         StatusMessage = "配方已保存为草稿";
     }
 
+    /// <summary>删除。</summary>
     private async Task DeleteAsync()
     {
         if (Selected == null || !Dialogs.Confirm($"删除配方 {Selected.Code}？")) return;
@@ -214,6 +264,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         await ReloadListAsync();
     }
 
+    /// <summary>提交。</summary>
     private async Task SubmitAsync()
     {
         if (Selected == null) return;
@@ -221,6 +272,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         await ReloadListAsync();
     }
 
+    /// <summary>审批通过。</summary>
     private async Task ApproveAsync()
     {
         if (Selected == null) return;
@@ -230,6 +282,7 @@ public sealed partial class RecipeViewModel : ViewModelBase
         await ReloadListAsync();
     }
 
+    /// <summary>激活配方。</summary>
     private async Task ActivateRecipeAsync()
     {
         if (Selected == null) return;

@@ -20,16 +20,26 @@ namespace XNY.Scada.Presentation.ViewModels;
 /// </summary>
 public sealed partial class FlowDesignerViewModel : ViewModelBase
 {
+    /// <summary>最大撤销。</summary>
     private const int MaxUndo = 50;
+    /// <summary>服务。</summary>
     private readonly FlowDefinitionService _service;
+    /// <summary>注册。</summary>
     private readonly INodeRegistry _registry;
+    /// <summary>引擎。</summary>
     private readonly IFlowEngine _engine;
+    /// <summary>点位。</summary>
     private readonly ITagService _tags;
+    /// <summary>MES。</summary>
     private readonly MesConfigService _mes;
+    /// <summary>节点映射。</summary>
     private readonly Dictionary<string, FlowNodeViewModel> _nodeMap = new();
+    /// <summary>撤销。</summary>
     private readonly Stack<string> _undo = new();
+    /// <summary>加载。</summary>
     private bool _loading;
 
+    /// <summary>创建流程设计器视图模型。</summary>
     public FlowDesignerViewModel(ViewModelContext context, FlowDefinitionService service, INodeRegistry registry,
         IFlowEngine engine, ITagService tags, MesConfigService mes) : base(context)
     {
@@ -96,86 +106,149 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         Edges.CollectionChanged += (_, _) => MarkDirty();
     }
 
+    /// <summary>标题。</summary>
     public override string Title => "流程设计";
 
+    /// <summary>工具面板。</summary>
     public IReadOnlyList<PaletteGroup> Palette { get; }
+    /// <summary>节点类型。</summary>
     public IReadOnlyList<NodeDescriptor> NodeTypes { get; }
+    /// <summary>触发器类型。</summary>
     public IReadOnlyList<TriggerType> TriggerTypes { get; } = Enum.GetValues<TriggerType>();
+    /// <summary>变量范围。</summary>
     public IReadOnlyList<VariableScope> VariableScopes { get; } = Enum.GetValues<VariableScope>();
+    /// <summary>并发策略模式。</summary>
     public IReadOnlyList<FlowConcurrency> ConcurrencyModes { get; } = Enum.GetValues<FlowConcurrency>();
 
+    /// <summary>流程数量。</summary>
     public ObservableCollection<FlowDefinitionEntity> Flows { get; } = [];
+    /// <summary>版本。</summary>
     public ObservableCollection<FlowVersionEntity> Versions { get; } = [];
+    /// <summary>节点。</summary>
     public ObservableCollection<FlowNodeViewModel> Nodes { get; } = [];
+    /// <summary>连线。</summary>
     public ObservableCollection<FlowEdgeViewModel> Edges { get; } = [];
+    /// <summary>触发器。</summary>
     public ObservableCollection<TriggerRow> Triggers { get; } = [];
+    /// <summary>变量声明。</summary>
     public ObservableCollection<VariableRow> Variables { get; } = [];
+    /// <summary>是否问题。</summary>
     public ObservableCollection<ValidationIssue> Issues { get; } = [];
+    /// <summary>模拟跟踪。</summary>
     public ObservableCollection<NodeTrace> SimulationTrace { get; } = [];
+    /// <summary>模拟变量列表。</summary>
     public ObservableCollection<KeyValuePair<string, string>> SimulationVariables { get; } = [];
 
     /// <summary>节点属性编辑器下拉候选</summary>
     public List<string> TagNames { get; private set; } = [];
+    /// <summary>流编码。</summary>
     public List<string> FlowCodes { get; private set; } = [];
+    /// <summary>MES编码。</summary>
     public List<string> MesCodes { get; private set; } = [];
+    /// <summary>节点标识。</summary>
     public IEnumerable<string> NodeIds => Nodes.Select(n => n.Id);
 
+    /// <summary>选中流。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenCommand), nameof(DeleteFlowCommand))]
     private FlowDefinitionEntity? _selectedFlow;
 
+    /// <summary>选中版本。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenVersionCommand))]
     private FlowVersionEntity? _selectedVersion;
 
+    /// <summary>是否已加载。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(PublishCommand), nameof(SimulateCommand), nameof(ExportCommand), nameof(RefreshJsonCommand))]
     private bool _isLoaded;
 
+    /// <summary>是否是否已修改。</summary>
     [ObservableProperty] private bool _isDirty;
+    /// <summary>代码。</summary>
     [ObservableProperty] private string _code = "";
+    /// <summary>流程设计器名称。</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>描述。</summary>
     [ObservableProperty] private string? _description;
+    /// <summary>工位。</summary>
     [ObservableProperty] private string? _station;
+    /// <summary>并发策略。</summary>
     [ObservableProperty] private FlowConcurrency _concurrency;
+    /// <summary>超时毫秒。</summary>
     [ObservableProperty] private int _timeoutMs;
+    /// <summary>版本。</summary>
     [ObservableProperty] private int _version;
+    /// <summary>起点节点标识。</summary>
     [ObservableProperty] private string _startNodeId = "";
+    /// <summary>JSON文本。</summary>
     [ObservableProperty] private string _jsonText = "";
+    /// <summary>模拟输入。</summary>
     [ObservableProperty] private string? _simulationInput;
+    /// <summary>模拟结果。</summary>
     [ObservableProperty] private string? _simulationResult;
+    /// <summary>选中节点。</summary>
     [ObservableProperty] private FlowNodeViewModel? _selectedNode;
+    /// <summary>选中边。</summary>
     [ObservableProperty] private FlowEdgeViewModel? _selectedEdge;
+    /// <summary>画布宽度。</summary>
     [ObservableProperty] private double _canvasWidth = 1600;
+    /// <summary>画布高度。</summary>
     [ObservableProperty] private double _canvasHeight = 1200;
 
+    /// <summary>新流命令。</summary>
     public IAsyncRelayCommand NewFlowCommand { get; }
+    /// <summary>打开命令。</summary>
     public IAsyncRelayCommand OpenCommand { get; }
+    /// <summary>打开版本命令。</summary>
     public IAsyncRelayCommand OpenVersionCommand { get; }
+    /// <summary>添加节点命令。</summary>
     public IAsyncRelayCommand<NodeDescriptor> AddNodeCommand { get; }
+    /// <summary>删除选中命令。</summary>
     public IAsyncRelayCommand DeleteSelectedCommand { get; }
+    /// <summary>集合起点命令。</summary>
     public IAsyncRelayCommand SetStartCommand { get; }
+    /// <summary>添加边命令。</summary>
     public IAsyncRelayCommand AddEdgeCommand { get; }
+    /// <summary>撤销命令。</summary>
     public IAsyncRelayCommand UndoCommand { get; }
+    /// <summary>自动布局命令。</summary>
     public IAsyncRelayCommand AutoLayoutCommand { get; }
+    /// <summary>验证命令。</summary>
     public IAsyncRelayCommand ValidateCommand { get; }
+    /// <summary>保存命令。</summary>
     public IAsyncRelayCommand SaveCommand { get; }
+    /// <summary>发布命令。</summary>
     public IAsyncRelayCommand PublishCommand { get; }
+    /// <summary>模拟命令。</summary>
     public IAsyncRelayCommand SimulateCommand { get; }
+    /// <summary>切换断点命令。</summary>
     public IAsyncRelayCommand ToggleBreakpointCommand { get; }
+    /// <summary>删除流命令。</summary>
     public IAsyncRelayCommand DeleteFlowCommand { get; }
+    /// <summary>导出命令。</summary>
     public IAsyncRelayCommand ExportCommand { get; }
+    /// <summary>导入命令。</summary>
     public IAsyncRelayCommand ImportCommand { get; }
+    /// <summary>刷新JSON命令。</summary>
     public IAsyncRelayCommand RefreshJsonCommand { get; }
+    /// <summary>应用JSON命令。</summary>
     public IAsyncRelayCommand ApplyJsonCommand { get; }
+    /// <summary>添加触发器命令。</summary>
     public IAsyncRelayCommand AddTriggerCommand { get; }
+    /// <summary>移除触发器命令。</summary>
     public IAsyncRelayCommand<TriggerRow> RemoveTriggerCommand { get; }
+    /// <summary>添加变量命令。</summary>
     public IAsyncRelayCommand AddVariableCommand { get; }
+    /// <summary>移除变量命令。</summary>
     public IAsyncRelayCommand<VariableRow> RemoveVariableCommand { get; }
+    /// <summary>清除执行状态命令。</summary>
     public IAsyncRelayCommand ClearExecStateCommand { get; }
 
+    /// <summary>能否编辑。</summary>
     public bool CanEdit => Can(Permissions.Flow.Edit);
 
+    /// <summary>处理激活。</summary>
     protected override async Task OnActivatedAsync()
     {
         TagNames = _tags.GetAll().Select(t => t.Tag.FullName).OrderBy(n => n).ToList();
@@ -187,6 +260,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         _engine.NodeCompleted += OnEngineNode;
     }
 
+    /// <summary>处理已停用。</summary>
     protected override void OnDeactivated()
     {
         _engine.NodeStarted -= OnEngineNode;
@@ -204,6 +278,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         });
     }
 
+    /// <summary>重新加载流程。</summary>
     private async Task ReloadFlowsAsync()
     {
         var code = SelectedFlow?.Code;
@@ -214,11 +289,13 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         SelectedFlow = Flows.FirstOrDefault(f => f.Code == code);
     }
 
+    /// <summary>当选中流变化时更新关联状态。</summary>
     partial void OnSelectedFlowChanged(FlowDefinitionEntity? value) => _ = RunAsync(async () =>
     {
         Replace(Versions, value == null ? [] : await _service.GetVersionsAsync(value.Code));
     });
 
+    /// <summary>当选中节点变化时更新关联状态。</summary>
     partial void OnSelectedNodeChanged(FlowNodeViewModel? oldValue, FlowNodeViewModel? newValue)
     {
         if (oldValue != null) oldValue.IsSelected = false;
@@ -230,6 +307,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         }
     }
 
+    /// <summary>当选中边变化时更新关联状态。</summary>
     partial void OnSelectedEdgeChanged(FlowEdgeViewModel? oldValue, FlowEdgeViewModel? newValue)
     {
         if (oldValue != null) oldValue.IsSelected = false;
@@ -240,13 +318,20 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         }
     }
 
+    /// <summary>当编码变化时更新关联状态。</summary>
     partial void OnCodeChanged(string value) => MarkDirty();
+    /// <summary>当名称变化时更新关联状态。</summary>
     partial void OnNameChanged(string value) => MarkDirty();
+    /// <summary>当说明变化时更新关联状态。</summary>
     partial void OnDescriptionChanged(string? value) => MarkDirty();
+    /// <summary>当工位变化时更新关联状态。</summary>
     partial void OnStationChanged(string? value) => MarkDirty();
+    /// <summary>当并发策略变化时更新关联状态。</summary>
     partial void OnConcurrencyChanged(FlowConcurrency value) => MarkDirty();
+    /// <summary>当超时（毫秒）变化时更新关联状态。</summary>
     partial void OnTimeoutMsChanged(int value) => MarkDirty();
 
+    /// <summary>填满建议。</summary>
     private void FillSuggestions(FlowNodeViewModel node)
     {
         var vars = Variables.Select(v => v.Name).ToList();
@@ -264,6 +349,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         }
     }
 
+    /// <summary>当行数变化时更新关联状态。</summary>
     private void OnRowsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         foreach (var item in e.NewItems?.OfType<INotifyPropertyChanged>() ?? [])
@@ -273,6 +359,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         MarkDirty();
     }
 
+    /// <summary>标记是否已修改。</summary>
     private void MarkDirty()
     {
         if (_loading || !IsLoaded) return;
@@ -282,6 +369,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
 
     // ---------------- 文档加载 / 生成 ----------------
 
+    /// <summary>加载文档。</summary>
     private void LoadDocument(FlowDocument doc)
     {
         _loading = true;
@@ -318,6 +406,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         }
     }
 
+    /// <summary>转换为文档。</summary>
     public FlowDocument ToDocument() => new()
     {
         Code = Code.Trim(),
@@ -334,6 +423,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         Edges = Edges.Where(e => _nodeMap.ContainsKey(e.FromId) && _nodeMap.ContainsKey(e.ToId)).Select(e => e.ToDef()).ToList()
     };
 
+    /// <summary>添加节点视图模型。</summary>
     private FlowNodeViewModel AddNodeVm(NodeDef def)
     {
         var vm = new FlowNodeViewModel(def, _registry.Find(def.Type))
@@ -347,6 +437,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         return vm;
     }
 
+    /// <summary>当节点变化时更新关联状态。</summary>
     private void OnNodeChanged(object? sender, EventArgs e)
     {
         if (sender is not FlowNodeViewModel n) return;
@@ -354,6 +445,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         MarkDirty();
     }
 
+    /// <summary>创建边。</summary>
     private FlowEdgeViewModel CreateEdge(EdgeDef def)
     {
         var e = new FlowEdgeViewModel(def, id => _nodeMap.GetValueOrDefault(id));
@@ -361,11 +453,13 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         return e;
     }
 
+    /// <summary>当边属性变化时更新关联状态。</summary>
     private void OnEdgePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(FlowEdgeViewModel.FromId) or nameof(FlowEdgeViewModel.ToId) or nameof(FlowEdgeViewModel.Port)) MarkDirty();
     }
 
+    /// <summary>设置起点。</summary>
     private void SetStart(string? id)
     {
         if (string.IsNullOrEmpty(id) || !_nodeMap.ContainsKey(id)) id = Nodes.FirstOrDefault(n => n.Type == "Start")?.Id ?? Nodes.FirstOrDefault()?.Id ?? "";
@@ -374,6 +468,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         MarkDirty();
     }
 
+    /// <summary>更新画布大小。</summary>
     private void UpdateCanvasSize()
     {
         CanvasWidth = Math.Max(1600, Nodes.Count == 0 ? 0 : Nodes.Max(n => n.X) + FlowNodeViewModel.Width + 200);
@@ -382,6 +477,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
 
     // ---------------- 编辑操作（画布调用） ----------------
 
+    /// <summary>添加节点。</summary>
     public FlowNodeViewModel? AddNode(string type, double x, double y)
     {
         if (!CanEdit || !IsLoaded) return null;
@@ -413,8 +509,10 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
     /// <summary>画布拖动结束时调用，用于撤销记录与画布扩展</summary>
     public void BeginMove() => PushUndo();
 
+    /// <summary>结束移动。</summary>
     public void EndMove() => UpdateCanvasSize();
 
+    /// <summary>移动节点。</summary>
     public void MoveNode(FlowNodeViewModel node, double x, double y)
     {
         if (!CanEdit) return;
@@ -433,6 +531,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         SelectedEdge = edge;
     }
 
+    /// <summary>删除选中。</summary>
     public void DeleteSelected()
     {
         if (!CanEdit) return;
@@ -456,6 +555,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         MarkDirty();
     }
 
+    /// <summary>压入撤销。</summary>
     private void PushUndo()
     {
         if (!IsLoaded) return;
@@ -469,6 +569,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         UndoCommand.NotifyCanExecuteChanged();
     }
 
+    /// <summary>撤销。</summary>
     private void Undo()
     {
         if (_undo.Count == 0) return;
@@ -513,6 +614,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         UpdateCanvasSize();
     }
 
+    /// <summary>清空执行状态。</summary>
     private void ClearExecState()
     {
         foreach (var n in Nodes) n.ExecState = NodeExecState.None;
@@ -520,12 +622,14 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
 
     // ---------------- 命令实现 ----------------
 
+    /// <summary>确认放弃。</summary>
     private async Task<bool> ConfirmDiscardAsync()
     {
         await Task.CompletedTask;
         return !IsDirty || Dialogs.Confirm("当前流程有未保存的修改，确定放弃？");
     }
 
+    /// <summary>新建流。</summary>
     private async Task NewFlowAsync()
     {
         if (!await ConfirmDiscardAsync()) return;
@@ -542,6 +646,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         IsDirty = true;
     }
 
+    /// <summary>打开。</summary>
     private async Task OpenAsync(string? code, int? version)
     {
         if (code == null || !await ConfirmDiscardAsync()) return;
@@ -552,6 +657,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         StatusMessage = $"已打开 {code} v{doc.Version}";
     }
 
+    /// <summary>校验。</summary>
     private bool Validate()
     {
         var issues = _service.Validate(ToDocument());
@@ -561,6 +667,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         return issues.All(i => !i.IsError);
     }
 
+    /// <summary>保存。</summary>
     private async Task SaveAsync()
     {
         Validate();
@@ -575,6 +682,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         StatusMessage = $"已保存草稿 v{Version}";
     }
 
+    /// <summary>发布。</summary>
     private async Task PublishAsync()
     {
         if (!Validate())
@@ -592,6 +700,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         StatusMessage = _engine.IsRunning ? $"已发布 v{Version}，流程空闲后自动切换" : $"已发布 v{Version}";
     }
 
+    /// <summary>模拟。</summary>
     private async Task SimulateAsync()
     {
         if (!Validate() && !Dialogs.Confirm("流程存在校验错误，仍要模拟运行？")) return;
@@ -613,6 +722,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         SimulationResult = $"{instance.Status}  耗时 {instance.DurationMs}ms  {instance.Error}";
     }
 
+    /// <summary>删除流。</summary>
     private async Task DeleteFlowAsync()
     {
         if (SelectedFlow == null || !Dialogs.Confirm($"删除流程 {SelectedFlow.Code} 及其全部版本？此操作不可恢复。")) return;
@@ -630,6 +740,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         await ReloadFlowsAsync();
     }
 
+    /// <summary>导出。</summary>
     private async Task ExportAsync()
     {
         var path = Dialogs.SaveFile("流程文件|*.json", $"{Code}_v{Version}.json");
@@ -638,6 +749,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         StatusMessage = $"已导出到 {path}";
     }
 
+    /// <summary>导入。</summary>
     private async Task ImportAsync()
     {
         if (!await ConfirmDiscardAsync()) return;
@@ -651,6 +763,7 @@ public sealed partial class FlowDesignerViewModel : ViewModelBase
         StatusMessage = "已导入，保存后生效";
     }
 
+    /// <summary>应用JSON。</summary>
     private Task ApplyJsonAsync()
     {
         var doc = FlowDocument.FromJson(JsonText);

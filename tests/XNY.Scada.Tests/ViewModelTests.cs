@@ -7,23 +7,36 @@ using Xunit;
 
 namespace XNY.Scada.Tests;
 
+/// <summary>模拟数据对话框。</summary>
 public sealed class FakeDialogs : IDialogService
 {
+    /// <summary>错误。</summary>
     public List<string> Errors { get; } = [];
+    /// <summary>提示应答。</summary>
     public Queue<string?> PromptAnswers { get; } = new();
 
+    /// <summary>显示信息。</summary>
     public void ShowInfo(string message, string title = "提示") { }
+    /// <summary>显示错误。</summary>
     public void ShowError(string message, string title = "错误") => Errors.Add(message);
+    /// <summary>确认。</summary>
     public bool Confirm(string message, string title = "确认") => true;
+    /// <summary>提示。</summary>
     public string? Prompt(string message, string title, string defaultValue = "") => PromptAnswers.Count > 0 ? PromptAnswers.Dequeue() : defaultValue;
+    /// <summary>请求签名。</summary>
     public SignatureCredential? RequestSignature(string reason) => new("admin", "Admin@123", "test");
+    /// <summary>请求密码更改。</summary>
     public PasswordChange? RequestPasswordChange() => null;
+    /// <summary>打开文件。</summary>
     public string? OpenFile(string filter) => null;
+    /// <summary>保存文件。</summary>
     public string? SaveFile(string filter, string defaultName) => null;
 }
 
+/// <summary>视图模型测试。</summary>
 public class ViewModelTests
 {
+    /// <summary>测试起点。</summary>
     private static Task<TestHost> StartAsync(FakeDialogs dialogs) => TestHost.StartAsync(configure: s =>
     {
         s.AddScadaPresentation();
@@ -31,6 +44,7 @@ public class ViewModelTests
         s.AddSingleton<IUiDispatcher, ImmediateDispatcher>();
     });
 
+    /// <summary>测试全部页面激活不含错误。</summary>
     [Fact]
     public async Task AllPages_ActivateWithoutErrors()
     {
@@ -48,6 +62,7 @@ public class ViewModelTests
         }
     }
 
+    /// <summary>测试流程设计器构建保存发布并模拟。</summary>
     [Fact]
     public async Task FlowDesigner_BuildSavePublishAndSimulate()
     {
@@ -94,6 +109,7 @@ public class ViewModelTests
         Assert.Equal(2, vm.Edges.Count);
     }
 
+    /// <summary>测试分档规则行解析并格式条件。</summary>
     [Fact]
     public void GradingRuleRow_ParsesAndFormatsConditions()
     {

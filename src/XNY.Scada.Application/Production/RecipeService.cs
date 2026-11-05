@@ -7,29 +7,45 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Application.Production;
 
+/// <summary>分档条件。</summary>
 public sealed class GradingCondition
 {
+    /// <summary>字段。</summary>
     public string Field { get; set; } = "";
+    /// <summary>最小。</summary>
     public double? Min { get; set; }
+    /// <summary>最大。</summary>
     public double? Max { get; set; }
 }
 
 /// <summary>配方管理：编辑→提交审批→审批→激活；修改已审批配方会生成新版本并回到草稿</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="currentUser">当前用户。</param>
+/// <param name="audit">审计。</param>
 public sealed class RecipeService(ISqlSugarClient db, IPermissionService permissions, ICurrentUser currentUser, IAuditService audit) : IRecipeProvider
 {
+    /// <summary>当前。</summary>
     private RecipeSnapshot? _current;
+    /// <summary>料盒容量。</summary>
     private Dictionary<int, int> _boxCapacity = new();
 
+    /// <summary>当前配方发生变化时触发。</summary>
     public event EventHandler? CurrentRecipeChanged;
 
+    /// <summary>配方数量发生变化时触发。</summary>
     public event EventHandler? RecipesChanged;
 
+    /// <summary>当前值。</summary>
     public RecipeSnapshot? Current => _current;
 
+    /// <summary>获取参数。</summary>
     public object? GetParam(string name) => _current?.Params.GetValueOrDefault(name);
 
+    /// <summary>获取料盒容量。</summary>
     public int GetBoxCapacity(int binNo) => _boxCapacity.GetValueOrDefault(binNo);
 
+    /// <summary>加载活动。</summary>
     public async Task LoadActiveAsync()
     {
         var r = await db.Queryable<RecipeEntity>().FirstAsync(x => x.IsActive);
@@ -41,14 +57,18 @@ public sealed class RecipeService(ISqlSugarClient db, IPermissionService permiss
         CurrentRecipeChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>转换为快照。</summary>
     private static RecipeSnapshot ToSnapshot(RecipeEntity r) =>
         new(r.Id, r.Code, r.Name, r.ProductModel, r.Version, Json.ToDictionary(r.ParamsJson));
 
+    /// <summary>列出。</summary>
     public Task<List<RecipeEntity>> ListAsync() => db.Queryable<RecipeEntity>().OrderBy(r => r.Code).ToListAsync();
 
+    /// <summary>获取规则。</summary>
     public Task<List<GradingRuleEntity>> GetRulesAsync(long recipeId) =>
         db.Queryable<GradingRuleEntity>().Where(g => g.RecipeId == recipeId).OrderBy(g => g.Priority).ToListAsync();
 
+    /// <summary>保存。</summary>
     public async Task<RecipeEntity> SaveAsync(RecipeEntity recipe, IReadOnlyList<GradingRuleEntity> rules, bool checkPermission = true)
     {
         if (checkPermission) permissions.Demand(Permissions.Recipe.Edit);
@@ -93,6 +113,7 @@ public sealed class RecipeService(ISqlSugarClient db, IPermissionService permiss
         return recipe;
     }
 
+    /// <summary>校验规则。</summary>
     public static void ValidateRule(GradingRuleEntity rule)
     {
         var conditions = Json.Deserialize<List<GradingCondition>>(rule.ConditionsJson) ?? [];
@@ -103,6 +124,7 @@ public sealed class RecipeService(ISqlSugarClient db, IPermissionService permiss
         }
     }
 
+    /// <summary>提交。</summary>
     public async Task SubmitAsync(long recipeId)
     {
         permissions.Demand(Permissions.Recipe.Edit);
@@ -139,6 +161,7 @@ public sealed class RecipeService(ISqlSugarClient db, IPermissionService permiss
         RecipesChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>删除。</summary>
     public async Task DeleteAsync(long recipeId)
     {
         permissions.Demand(Permissions.Recipe.Edit);
@@ -162,6 +185,7 @@ public sealed class RecipeService(ISqlSugarClient db, IPermissionService permiss
         if (activate) await ActivateAsync(recipe.Id, "template", checkPermission: false);
     }
 
+    /// <summary>转换为双。</summary>
     internal static double? ToDouble(object? v) =>
         v switch
         {

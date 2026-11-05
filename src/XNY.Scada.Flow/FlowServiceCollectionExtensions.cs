@@ -5,6 +5,7 @@ using XNY.Scada.Flow.Runtime;
 
 namespace XNY.Scada.Flow;
 
+/// <summary>流服务集合的扩展方法。</summary>
 public static class FlowServiceCollectionExtensions
 {
     /// <summary>注册流程引擎。pluginAssemblies 中的 INodeHandler 会作为扩展节点加载。</summary>

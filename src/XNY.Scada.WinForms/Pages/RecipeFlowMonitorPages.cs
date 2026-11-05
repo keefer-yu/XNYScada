@@ -5,8 +5,10 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>配方页面。</summary>
 public sealed class RecipePage : UserControl
 {
+    /// <summary>创建配方页面。</summary>
     public RecipePage(RecipeViewModel vm)
     {
         var recipes = new BoundGrid<RecipeEntity>(vm.Recipes, false,
@@ -63,8 +65,10 @@ public sealed class RecipePage : UserControl
     }
 }
 
+/// <summary>流程监控页面。</summary>
 public sealed class FlowMonitorPage : UserControl
 {
+    /// <summary>创建流程监控页面。</summary>
     public FlowMonitorPage(FlowMonitorViewModel vm)
     {
         var dot = new Label { Text = "●", AutoSize = true, Font = new Font(Font.FontFamily, 12f), Margin = new Padding(0, 4, 2, 0) };

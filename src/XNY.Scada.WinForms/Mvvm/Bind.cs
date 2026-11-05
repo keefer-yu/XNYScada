@@ -15,18 +15,24 @@ namespace XNY.Scada.WinForms.Mvvm;
 /// </summary>
 public static class Bind
 {
+    /// <summary>调度器。</summary>
     public static IUiDispatcher Dispatcher { get; set; } = new ImmediateDispatcher();
 
+    /// <summary>处理界面。</summary>
     private static void OnUi(Action action)
     {
         if (Dispatcher.CheckAccess()) action();
         else Dispatcher.BeginInvoke(action);
     }
 
+    /// <summary>订阅。</summary>
+    /// <param name="dispose">释放。</param>
     private sealed class Subscription(Action dispose) : IDisposable
     {
+        /// <summary>释放。</summary>
         private Action? _dispose = dispose;
 
+        /// <summary>释放资源。</summary>
         public void Dispose()
         {
             _dispose?.Invoke();
@@ -34,6 +40,7 @@ public static class Bind
         }
     }
 
+    /// <summary>观察。</summary>
     public static IDisposable Observe(INotifyPropertyChanged source, string property, Action action, bool invokeNow = true)
     {
         PropertyChangedEventHandler handler = (_, e) =>
@@ -45,6 +52,7 @@ public static class Bind
         return new Subscription(() => source.PropertyChanged -= handler);
     }
 
+    /// <summary>观察。</summary>
     public static IDisposable Observe(INotifyCollectionChanged source, Action action, bool invokeNow = true)
     {
         NotifyCollectionChangedEventHandler handler = (_, _) => OnUi(action);
@@ -55,11 +63,17 @@ public static class Bind
 
     // ---------------- 属性反射与类型转换 ----------------
 
+    /// <summary>属性。</summary>
     private static PropertyInfo Prop(object source, string property) =>
         source.GetType().GetProperty(property) ?? throw new ArgumentException($"{source.GetType().Name} 没有属性 {property}");
 
+    /// <summary>访问器。</summary>
+    /// <param name="Type">类型。</param>
+    /// <param name="Get">获取。</param>
+    /// <param name="Set">集合。</param>
     private sealed record Accessor(Type Type, Func<object?> Get, Action<object?> Set);
 
+    /// <summary>访问方向。</summary>
     private static Accessor Access(object source, string property)
     {
         if (source is EntityProxy proxy)
@@ -75,6 +89,7 @@ public static class Bind
         return new Accessor(pi.PropertyType, () => pi.GetValue(source), v => pi.SetValue(source, v));
     }
 
+    /// <summary>获取路径。</summary>
     public static object? GetPath(object? obj, string path)
     {
         foreach (var part in path.Split('.'))
@@ -85,6 +100,7 @@ public static class Bind
         return obj;
     }
 
+    /// <summary>格式化。</summary>
     public static string Format(object? value, string? format = null) => value switch
     {
         null => "",
@@ -94,6 +110,7 @@ public static class Bind
         _ => value.ToString() ?? ""
     };
 
+    /// <summary>尝试转换。</summary>
     public static bool TryConvert(string text, Type type, out object? value)
     {
         var underlying = Nullable.GetUnderlyingType(type);
@@ -127,6 +144,7 @@ public static class Bind
         return Observe(source, property, () => control.Text = format != null ? format(pi.Get()) : Format(pi.Get()));
     }
 
+    /// <summary>文本。</summary>
     public static IDisposable Text(ToolStripItem item, INotifyPropertyChanged source, string property)
     {
         var pi = Access(source, property);
@@ -207,6 +225,7 @@ public static class Bind
         });
     }
 
+    /// <summary>日期。</summary>
     public static IDisposable Date(DateTimePicker picker, INotifyPropertyChanged source, string property)
     {
         var pi = Access(source, property);
@@ -227,6 +246,7 @@ public static class Bind
         });
     }
 
+    /// <summary>编号。</summary>
     public static IDisposable Number(NumericUpDown number, INotifyPropertyChanged source, string property)
     {
         var pi = Access(source, property);
@@ -248,6 +268,7 @@ public static class Bind
         });
     }
 
+    /// <summary>可见。</summary>
     public static IDisposable Visible(Control control, INotifyPropertyChanged source, string property, bool invert = false)
     {
         var pi = Access(source, property);
@@ -259,6 +280,7 @@ public static class Bind
         });
     }
 
+    /// <summary>是否启用。</summary>
     public static IDisposable Enabled(Control control, INotifyPropertyChanged source, string property)
     {
         var pi = Access(source, property);
@@ -267,8 +289,12 @@ public static class Bind
 
     // ---------------- ComboBox ----------------
 
+    /// <summary>下拉框项。</summary>
+    /// <param name="Value">值。</param>
+    /// <param name="Text">文本。</param>
     public sealed record ComboItem(object? Value, string Text)
     {
+        /// <summary>转换为字符串。</summary>
         public override string ToString() => Text;
     }
 
@@ -369,6 +395,7 @@ public static class Bind
         return new Subscription(() => command.CanExecuteChanged -= canChanged);
     }
 
+    /// <summary>执行。</summary>
     public static void Execute(ICommand command, object? parameter = null)
     {
         if (command.CanExecute(parameter)) command.Execute(parameter);
@@ -417,8 +444,10 @@ public static class Bind
 /// <summary>把 ObservableCollection 同步为 BindingList，供 DataGridView 数据绑定（元素引用相同，单元格编辑直接作用于 ViewModel 对象）</summary>
 public sealed class ObservableBindingList<T> : BindingList<T>
 {
+    /// <summary>源。</summary>
     private readonly ObservableCollection<T> _source;
 
+    /// <summary>创建可观察绑定列表。</summary>
     public ObservableBindingList(ObservableCollection<T> source) : base(new List<T>(source))
     {
         _source = source;
@@ -433,8 +462,10 @@ public sealed class ObservableBindingList<T> : BindingList<T>
     /// <summary>同步过程中为 true，表格据此忽略因数据刷新导致的选中变化</summary>
     public bool Syncing { get; private set; }
 
+    /// <summary>已同步发生变化时触发。</summary>
     public event EventHandler? Synced;
 
+    /// <summary>同步。</summary>
     private void Sync(NotifyCollectionChangedEventArgs e)
     {
         Syncing = true;
@@ -477,11 +508,15 @@ public sealed class ObservableBindingList<T> : BindingList<T>
 }
 
 /// <summary>为无属性通知的实体（如 MES 接口、角色）提供可绑定包装：通过本包装写入的属性会触发通知</summary>
+/// <param name="target">目标。</param>
 public sealed class EntityProxy(object target) : INotifyPropertyChanged
 {
+    /// <summary>操作对象。</summary>
     public object Target { get; } = target;
 
+    /// <summary>属性发生变化时触发。</summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    /// <summary>引发。</summary>
     public void Raise(string property) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 }

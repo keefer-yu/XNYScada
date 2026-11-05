@@ -15,21 +15,31 @@ namespace XNY.Scada.Wpf.Views;
 /// </summary>
 public partial class FlowDesignerView
 {
+    /// <summary>拖动格式。</summary>
     private const string DragFormat = "xny-flow-node";
+    /// <summary>工具面板下。</summary>
     private Point _paletteDown;
+    /// <summary>拖动节点。</summary>
     private FlowNodeViewModel? _dragNode;
+    /// <summary>拖动偏移。</summary>
     private Vector _dragOffset;
+    /// <summary>已移动。</summary>
     private bool _moved;
+    /// <summary>连接从。</summary>
     private FlowNodeViewModel? _connectFrom;
+    /// <summary>连接端口号。</summary>
     private string? _connectPort;
 
+    /// <summary>创建流程设计器视图。</summary>
     public FlowDesignerView()
     {
         InitializeComponent();
     }
 
+    /// <summary>视图模型。</summary>
     private FlowDesignerViewModel? Vm => DataContext as FlowDesignerViewModel;
 
+    /// <summary>查找数据。</summary>
     private static T? FindData<T>(DependencyObject? d) where T : class
     {
         while (d != null)
@@ -42,6 +52,7 @@ public partial class FlowDesignerView
 
     // ---------- 节点面板 ----------
 
+    /// <summary>处理工具面板鼠标下。</summary>
     private void OnPaletteMouseDown(object sender, MouseButtonEventArgs e)
     {
         _paletteDown = e.GetPosition(this);
@@ -54,6 +65,7 @@ public partial class FlowDesignerView
         }
     }
 
+    /// <summary>处理工具面板鼠标移动。</summary>
     private void OnPaletteMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || sender is not FrameworkElement { DataContext: NodeDescriptor d }) return;
@@ -62,6 +74,7 @@ public partial class FlowDesignerView
         DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(DragFormat, d.Type), DragDropEffects.Copy);
     }
 
+    /// <summary>处理画布投影。</summary>
     private void OnCanvasDrop(object sender, DragEventArgs e)
     {
         if (Vm == null || e.Data.GetData(DragFormat) is not string type) return;
@@ -72,6 +85,7 @@ public partial class FlowDesignerView
 
     // ---------- 节点拖动 ----------
 
+    /// <summary>处理节点鼠标下。</summary>
     private void OnNodeMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (Vm == null || sender is not FrameworkElement { DataContext: FlowNodeViewModel node } el) return;
@@ -85,6 +99,7 @@ public partial class FlowDesignerView
         e.Handled = true;
     }
 
+    /// <summary>处理节点鼠标移动。</summary>
     private void OnNodeMouseMove(object sender, MouseEventArgs e)
     {
         if (Vm == null || _dragNode == null || e.LeftButton != MouseButtonState.Pressed) return;
@@ -98,6 +113,7 @@ public partial class FlowDesignerView
         Vm.MoveNode(_dragNode, pos.X, pos.Y);
     }
 
+    /// <summary>处理节点鼠标上。</summary>
     private void OnNodeMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (_dragNode == null) return;
@@ -109,6 +125,7 @@ public partial class FlowDesignerView
 
     // ---------- 端口连线 ----------
 
+    /// <summary>处理端口号鼠标下。</summary>
     private void OnPortMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (Vm is not { CanEdit: true } || sender is not FrameworkElement { DataContext: PortInfo port } el) return;
@@ -124,6 +141,7 @@ public partial class FlowDesignerView
         e.Handled = true;
     }
 
+    /// <summary>处理画布鼠标移动。</summary>
     private void OnCanvasMouseMove(object sender, MouseEventArgs e)
     {
         if (_connectFrom == null) return;
@@ -132,6 +150,7 @@ public partial class FlowDesignerView
         DragLine.Y2 = pos.Y;
     }
 
+    /// <summary>处理画布鼠标上。</summary>
     private void OnCanvasMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (_connectFrom == null || _connectPort == null) return;
@@ -149,6 +168,7 @@ public partial class FlowDesignerView
         _connectPort = null;
     }
 
+    /// <summary>处理画布鼠标下。</summary>
     private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (Vm == null) return;
@@ -157,6 +177,7 @@ public partial class FlowDesignerView
         Focus();
     }
 
+    /// <summary>处理边鼠标下。</summary>
     private void OnEdgeMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (Vm == null || sender is not FrameworkElement { DataContext: FlowEdgeViewModel edge }) return;
@@ -167,6 +188,7 @@ public partial class FlowDesignerView
 
     // ---------- 键盘 / 缩放 / 校验定位 ----------
 
+    /// <summary>处理键下。</summary>
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (Vm == null || e.OriginalSource is TextBoxBase or ComboBox or PasswordBox) return;
@@ -187,6 +209,7 @@ public partial class FlowDesignerView
         }
     }
 
+    /// <summary>处理画布滚轮。</summary>
     private void OnCanvasWheel(object sender, MouseWheelEventArgs e)
     {
         if (Keyboard.Modifiers != ModifierKeys.Control) return;
@@ -194,6 +217,7 @@ public partial class FlowDesignerView
         e.Handled = true;
     }
 
+    /// <summary>处理问题双击。</summary>
     private void OnIssueDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (Vm == null || sender is not ListBox { SelectedItem: ValidationIssue { NodeId: { } id } }) return;

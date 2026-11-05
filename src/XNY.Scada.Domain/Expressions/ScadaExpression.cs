@@ -17,12 +17,15 @@ public delegate object? PlaceholderResolver(string kind, string name);
 /// </summary>
 public static partial class ScadaExpression
 {
+    /// <summary>占位正则。</summary>
     [GeneratedRegex(@"\{(?<kind>[A-Za-z]+):(?<name>[^{}]+)\}")]
     private static partial Regex PlaceholderRegex();
 
+    /// <summary>模板正则。</summary>
     [GeneratedRegex(@"\$\{(?<name>[^{}]+)\}")]
     private static partial Regex TemplateRegex();
 
+    /// <summary>求值。</summary>
     public static object? Evaluate(string expression, IReadOnlyDictionary<string, object?>? variables = null, PlaceholderResolver? resolver = null)
     {
         if (string.IsNullOrWhiteSpace(expression)) return null;
@@ -48,6 +51,7 @@ public static partial class ScadaExpression
         return e.Evaluate();
     }
 
+    /// <summary>求值布尔。</summary>
     public static bool EvaluateBool(string expression, IReadOnlyDictionary<string, object?>? variables = null, PlaceholderResolver? resolver = null)
     {
         var r = Evaluate(expression, variables, resolver);
@@ -78,6 +82,7 @@ public static partial class ScadaExpression
         return PlaceholderRegex().Replace(text, m => formatter(resolver?.Invoke(m.Groups["kind"].Value, m.Groups["name"].Value.Trim())));
     }
 
+    /// <summary>转换为固定区域字符串。</summary>
     public static string ToInvariantString(object? value) => value switch
     {
         null => "",
@@ -96,6 +101,7 @@ public static partial class ScadaExpression
         _ => v
     };
 
+    /// <summary>求值函数。</summary>
     private static void EvaluateFunction(string name, NCalc.Handlers.FunctionEventArgs args)
     {
         object?[] P() => Enumerable.Range(0, args.Parameters.Count).Select(i => args.Parameters.Evaluate(i)).ToArray();

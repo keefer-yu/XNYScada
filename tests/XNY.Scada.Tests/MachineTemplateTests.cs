@@ -15,13 +15,19 @@ namespace XNY.Scada.Tests;
 /// <summary>四类机型模板：导入后用模拟 PLC 驱动握手，验证完整业务链路</summary>
 public class MachineTemplateTests
 {
+    /// <summary>机器名。</summary>
     private sealed class Machine : IAsyncDisposable
     {
+        /// <summary>宿主。</summary>
         public required TestHost Host { get; init; }
+        /// <summary>模拟。</summary>
         public required string Sim { get; init; }
+        /// <summary>完成。</summary>
         public ConcurrentQueue<FlowInstance> Completed { get; } = new();
+        /// <summary>记录。</summary>
         public ConcurrentQueue<CellRecordEntity> Records { get; } = new();
 
+        /// <summary>节拍。</summary>
         public async Task<int> CycleAsync(string req, string done, string result, params (string Address, object Value)[] data)
         {
             var before = Completed.Count;
@@ -36,15 +42,19 @@ public class MachineTemplateTests
             return value;
         }
 
+        /// <summary>失败。</summary>
         public string Failures() => string.Join("; ", Completed.Where(i => i.Status != FlowInstanceStatus.Completed)
             .Select(i => $"{i.Document.Code}@{i.CurrentNodeId}: {i.Error}"));
 
+        /// <summary>NG记录。</summary>
         public Task<List<NgRecordEntity>> NgRecordsAsync() =>
             Host.Get<ISqlSugarClient>().Queryable<NgRecordEntity>().SplitTable(t => t).OrderBy(r => r.Id).ToListAsync();
 
+        /// <summary>释放资源。</summary>
         public ValueTask DisposeAsync() => Host.DisposeAsync();
     }
 
+    /// <summary>测试起点。</summary>
     private static async Task<Machine> StartAsync(string machineType, Action<MachineTemplate>? customize = null)
     {
         var h = await TestHost.StartAsync();
@@ -64,6 +74,7 @@ public class MachineTemplateTests
         return m;
     }
 
+    /// <summary>测试全部模板加载并覆盖层每个机台类型。</summary>
     [Fact]
     public void AllTemplates_Load_AndCoverEveryMachineType()
     {
@@ -85,6 +96,7 @@ public class MachineTemplateTests
         });
     }
 
+    /// <summary>测试托盘程序集绑定单元格拒绝NG并完成整行托盘。</summary>
     [Fact]
     public async Task TrayAssembly_BindsCells_RejectsNg_AndCompletesFullTray()
     {
@@ -119,6 +131,7 @@ public class MachineTemplateTests
         Assert.Equal(["NG_BARCODE", "NG_SPEC", "NO_TRAY"], (await m.NgRecordsAsync()).Select(r => r.NgCode));
     }
 
+    /// <summary>测试托盘拆盘解绑按位置并信号空。</summary>
     [Fact]
     public async Task TrayDisassembly_UnbindsByPosition_AndSignalsEmpty()
     {
@@ -145,6 +158,7 @@ public class MachineTemplateTests
         Assert.Equal(["NG_POSITION"], (await m.NgRecordsAsync()).Select(r => r.NgCode));
     }
 
+    /// <summary>测试分档分配档位按配方规则。</summary>
     [Fact]
     public async Task Grading_AssignsBinsByRecipeRules()
     {
@@ -166,6 +180,7 @@ public class MachineTemplateTests
         Assert.Equal(1, m.Host.Get<IProductionService>().Counters.BinCounts.GetValueOrDefault(4));
     }
 
+    /// <summary>测试NG排序中映射NG编码到料盒并句柄料盒整行。</summary>
     [Fact]
     public async Task NgSorting_MapsNgCodesToBoxes_AndHandlesBoxFull()
     {

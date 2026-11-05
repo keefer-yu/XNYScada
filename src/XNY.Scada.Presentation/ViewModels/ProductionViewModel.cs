@@ -8,12 +8,17 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Presentation.ViewModels;
 
+/// <summary>生产页面的视图模型。</summary>
 public sealed partial class ProductionViewModel : ViewModelBase
 {
+    /// <summary>查询。</summary>
     private readonly ProductionQueryService _query;
+    /// <summary>托盘。</summary>
     private readonly ITrayService _trays;
+    /// <summary>审计。</summary>
     private readonly IAuditService _audit;
 
+    /// <summary>创建生产视图模型。</summary>
     public ProductionViewModel(ViewModelContext context, ProductionQueryService query, ITrayService trays, IAuditService audit) : base(context)
     {
         _query = query;
@@ -26,40 +31,65 @@ public sealed partial class ProductionViewModel : ViewModelBase
         UnbindTrayCommand = Secured(Permissions.Production.TrayManual, UnbindTrayAsync);
     }
 
+    /// <summary>标题。</summary>
     public override string Title => "生产数据";
 
+    /// <summary>结果筛选条件。</summary>
     public IReadOnlyList<string> ResultFilters { get; } = ["全部", "OK", "NG"];
 
+    /// <summary>记录。</summary>
     public ObservableCollection<CellRecordEntity> Records { get; } = [];
+    /// <summary>NG记录。</summary>
     public ObservableCollection<NgRecordEntity> NgRecords { get; } = [];
+    /// <summary>每小时。</summary>
     public ObservableCollection<HourlyOutput> Hourly { get; } = [];
+    /// <summary>托盘单元格。</summary>
     public ObservableCollection<TrayCellEntity> TrayCells { get; } = [];
 
+    /// <summary>从。</summary>
     [ObservableProperty] private DateTime _from = DateTime.Today;
+    /// <summary>到。</summary>
     [ObservableProperty] private DateTime _to = DateTime.Today.AddDays(1);
+    /// <summary>单元格代码。</summary>
     [ObservableProperty] private string? _cellCode;
+    /// <summary>托盘代码。</summary>
     [ObservableProperty] private string? _trayCode;
+    /// <summary>结果筛选。</summary>
     [ObservableProperty] private string _resultFilter = "全部";
+    /// <summary>总计。</summary>
     [ObservableProperty] private int _total;
+    /// <summary>OK数量。</summary>
     [ObservableProperty] private int _okCount;
+    /// <summary>NG数量。</summary>
     [ObservableProperty] private int _ngCount;
+    /// <summary>跟踪代码。</summary>
     [ObservableProperty] private string? _traceCode;
+    /// <summary>跟踪结果。</summary>
     [ObservableProperty] private string? _traceResult;
+    /// <summary>已跟踪托盘代码。</summary>
     [ObservableProperty] private string? _tracedTrayCode;
 
+    /// <summary>查询命令。</summary>
     public IAsyncRelayCommand QueryCommand { get; }
+    /// <summary>导出命令。</summary>
     public IAsyncRelayCommand ExportCommand { get; }
+    /// <summary>跟踪命令。</summary>
     public IAsyncRelayCommand TraceCommand { get; }
+    /// <summary>解绑单元格命令。</summary>
     public IAsyncRelayCommand<TrayCellEntity> UnbindCellCommand { get; }
+    /// <summary>解绑托盘命令。</summary>
     public IAsyncRelayCommand UnbindTrayCommand { get; }
 
+    /// <summary>处理激活。</summary>
     protected override Task OnActivatedAsync() => QueryAsync();
 
+    /// <summary>构建查询。</summary>
     private ProductionQuery BuildQuery() => new(From, To,
         string.IsNullOrWhiteSpace(CellCode) ? null : CellCode.Trim(),
         string.IsNullOrWhiteSpace(TrayCode) ? null : TrayCode.Trim(),
         ResultFilter switch { "OK" => true, "NG" => false, _ => null });
 
+    /// <summary>查询。</summary>
     private async Task QueryAsync()
     {
         if (From >= To) throw new InvalidOperationException("开始时间必须早于结束时间");
@@ -72,6 +102,7 @@ public sealed partial class ProductionViewModel : ViewModelBase
         Replace(Hourly, await _query.HourlyAsync(From, To));
     }
 
+    /// <summary>导出。</summary>
     private async Task ExportAsync()
     {
         var path = Dialogs.SaveFile("CSV 文件|*.csv", $"production_{From:yyyyMMdd}_{To:yyyyMMdd}.csv");
@@ -100,6 +131,7 @@ public sealed partial class ProductionViewModel : ViewModelBase
         TraceResult = $"托盘 {trayCode}  状态 {tray?.Status}  电芯数 {TrayCells.Count}";
     }
 
+    /// <summary>解绑单元格。</summary>
     private async Task UnbindCellAsync(TrayCellEntity? cell)
     {
         if (cell == null || TracedTrayCode == null) return;
@@ -109,6 +141,7 @@ public sealed partial class ProductionViewModel : ViewModelBase
         await TraceAsync();
     }
 
+    /// <summary>解绑托盘。</summary>
     private async Task UnbindTrayAsync()
     {
         if (TracedTrayCode == null) return;

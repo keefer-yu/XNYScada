@@ -3,10 +3,13 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Forms;
 
+/// <summary>闪屏窗体。</summary>
 public sealed class SplashForm : Form
 {
+    /// <summary>消息。</summary>
     private readonly Label _message;
 
+    /// <summary>创建闪屏窗体。</summary>
     public SplashForm()
     {
         FormBorderStyle = FormBorderStyle.None;
@@ -37,6 +40,7 @@ public sealed class SplashForm : Form
         Controls.Add(title);
     }
 
+    /// <summary>消息。</summary>
     public string Message
     {
         set => _message.Text = value;
@@ -46,8 +50,10 @@ public sealed class SplashForm : Form
 /// <summary>简单表单对话框基类：内容区 + 确定/取消</summary>
 public abstract class FormDialog : Form
 {
+    /// <summary>循环体。</summary>
     private readonly TableLayoutPanel _body;
 
+    /// <summary>创建窗体对话框。</summary>
     protected FormDialog(string title, int width = 400)
     {
         Text = title;
@@ -82,13 +88,17 @@ public abstract class FormDialog : Form
         Shown += (_, _) => FirstInput?.Focus();
     }
 
+    /// <summary>首条输入。</summary>
     protected Control? FirstInput { get; set; }
 
+    /// <summary>错误提示。</summary>
     protected Label ErrorText { get; } = new() { ForeColor = Ui.Danger, AutoSize = true, MaximumSize = new Size(360, 0) };
 
+    /// <summary>添加标签。</summary>
     protected void AddLabel(string text) =>
         Add(new Label { Text = text, AutoSize = true, MaximumSize = new Size(360, 0), Margin = new Padding(0, 8, 0, 2) });
 
+    /// <summary>添加。</summary>
     protected T Add<T>(T control) where T : Control
     {
         if (control is TextBox) control.Dock = DockStyle.Fill;
@@ -98,13 +108,17 @@ public abstract class FormDialog : Form
         return control;
     }
 
+    /// <summary>校验输入。</summary>
     protected virtual bool ValidateInput() => true;
 }
 
+/// <summary>提示窗体。</summary>
 public sealed class PromptForm : FormDialog
 {
+    /// <summary>输入。</summary>
     private readonly TextBox _input;
 
+    /// <summary>创建提示窗体。</summary>
     public PromptForm(string title, string message, string defaultValue) : base(title)
     {
         AddLabel(message);
@@ -112,15 +126,21 @@ public sealed class PromptForm : FormDialog
         Shown += (_, _) => _input.SelectAll();
     }
 
+    /// <summary>提示窗体值。</summary>
     public string Value => _input.Text;
 }
 
+/// <summary>签名窗体。</summary>
 public sealed class SignatureForm : FormDialog
 {
+    /// <summary>用户。</summary>
     private readonly TextBox _user;
+    /// <summary>密码。</summary>
     private readonly TextBox _password;
+    /// <summary>注释。</summary>
     private readonly TextBox _comment;
 
+    /// <summary>创建签名窗体。</summary>
     public SignatureForm(string reason) : base("电子签名")
     {
         AddLabel("操作：" + reason);
@@ -133,8 +153,10 @@ public sealed class SignatureForm : FormDialog
         Add(ErrorText);
     }
 
+    /// <summary>签名窗体结果。</summary>
     public SignatureCredential? Result { get; private set; }
 
+    /// <summary>校验输入。</summary>
     protected override bool ValidateInput()
     {
         if (string.IsNullOrWhiteSpace(_user.Text) || _password.Text.Length == 0)
@@ -147,12 +169,17 @@ public sealed class SignatureForm : FormDialog
     }
 }
 
+/// <summary>更改密码窗体。</summary>
 public sealed class ChangePasswordForm : FormDialog
 {
+    /// <summary>旧。</summary>
     private readonly TextBox _old;
+    /// <summary>新。</summary>
     private readonly TextBox _new;
+    /// <summary>确认。</summary>
     private readonly TextBox _confirm;
 
+    /// <summary>创建更改密码窗体。</summary>
     public ChangePasswordForm() : base("修改密码")
     {
         AddLabel("原密码");
@@ -164,8 +191,10 @@ public sealed class ChangePasswordForm : FormDialog
         Add(ErrorText);
     }
 
+    /// <summary>更改密码窗体结果。</summary>
     public PasswordChange? Result { get; private set; }
 
+    /// <summary>校验输入。</summary>
     protected override bool ValidateInput()
     {
         if (_new.Text.Length == 0 || _new.Text != _confirm.Text)

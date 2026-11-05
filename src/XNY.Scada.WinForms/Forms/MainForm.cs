@@ -6,22 +6,33 @@ using XNY.Scada.WinForms.Pages;
 
 namespace XNY.Scada.WinForms.Forms;
 
+/// <summary>主窗体。</summary>
 public sealed class MainForm : Form, IMessageFilter
 {
+    /// <summary>视图模型。</summary>
     private readonly ShellViewModel _vm;
+    /// <summary>内容。</summary>
     private readonly Panel _content = new() { Dock = DockStyle.Fill, BackColor = Ui.PageBack, Padding = new Padding(4) };
+    /// <summary>页面。</summary>
     private readonly Dictionary<ViewModelBase, Control> _pages = new();
+    /// <summary>确认条。</summary>
     private readonly FlowLayoutPanel _confirmBar = new()
     {
         Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false,
         BackColor = Color.FromArgb(0xFF, 0xF7, 0xE6), Padding = new Padding(8, 4, 8, 4)
     };
+    /// <summary>主窗体状态。</summary>
     private readonly ToolStripStatusLabel _status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+    /// <summary>页面状态。</summary>
     private readonly ToolStripStatusLabel _pageStatus = new() { TextAlign = ContentAlignment.MiddleRight };
+    /// <summary>忙碌。</summary>
     private readonly ToolStripProgressBar _busy = new() { Style = ProgressBarStyle.Marquee, Visible = false, Width = 80 };
+    /// <summary>页面绑定。</summary>
     private readonly List<IDisposable> _pageBindings = [];
+    /// <summary>登录正在显示。</summary>
     private bool _loginShowing;
 
+    /// <summary>创建主窗体。</summary>
     public MainForm(ShellViewModel vm)
     {
         _vm = vm;
@@ -57,6 +68,7 @@ public sealed class MainForm : Form, IMessageFilter
         };
     }
 
+    /// <summary>构建标题。</summary>
     private Control BuildHeader()
     {
         var header = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = Ui.HeaderBack, Padding = new Padding(12, 0, 12, 0) };
@@ -99,6 +111,7 @@ public sealed class MainForm : Form, IMessageFilter
         return header;
     }
 
+    /// <summary>标题键。</summary>
     private static Button HeaderButton(string text, System.Windows.Input.ICommand command)
     {
         var b = new Button
@@ -111,6 +124,7 @@ public sealed class MainForm : Form, IMessageFilter
         return b;
     }
 
+    /// <summary>构建菜单。</summary>
     private Control BuildMenu()
     {
         var menu = new FlowLayoutPanel
@@ -135,6 +149,7 @@ public sealed class MainForm : Form, IMessageFilter
         return menu;
     }
 
+    /// <summary>显示页面。</summary>
     private void ShowPage()
     {
         _pageBindings.ForEach(b => b.Dispose());
@@ -155,6 +170,7 @@ public sealed class MainForm : Form, IMessageFilter
         _pageBindings.Add(Bind.Observe(page, nameof(ViewModelBase.IsBusy), () => _busy.Visible = page.IsBusy));
     }
 
+    /// <summary>重新生成确认。</summary>
     private void RebuildConfirmations()
     {
         _confirmBar.SuspendLayout();
@@ -172,6 +188,7 @@ public sealed class MainForm : Form, IMessageFilter
         _confirmBar.ResumeLayout();
     }
 
+    /// <summary>显示登录。</summary>
     private void ShowLogin()
     {
         if (_loginShowing) return;
@@ -188,6 +205,7 @@ public sealed class MainForm : Form, IMessageFilter
         }
     }
 
+    /// <summary>前置筛选消息。</summary>
     public bool PreFilterMessage(ref Message m)
     {
         // WM_KEYDOWN / WM_LBUTTONDOWN / WM_RBUTTONDOWN / WM_MOUSEWHEEL 视为操作活动，用于自动登出计时
@@ -195,6 +213,7 @@ public sealed class MainForm : Form, IMessageFilter
         return false;
     }
 
+    /// <summary>处理窗体关闭中。</summary>
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         if (e.CloseReason == CloseReason.UserClosing &&

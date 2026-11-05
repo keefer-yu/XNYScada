@@ -11,10 +11,13 @@ using WinApp = System.Windows.Forms.Application;
 
 namespace XNY.Scada.WinForms;
 
+/// <summary>程序。</summary>
 internal static class Program
 {
+    /// <summary>宿主。</summary>
     private static IHost? _host;
 
+    /// <summary>程序入口。</summary>
     [STAThread]
     private static void Main(string[] args)
     {
@@ -84,6 +87,7 @@ internal static class Program
         StopHost();
     }
 
+    /// <summary>停止宿主。</summary>
     private static void StopHost()
     {
         if (_host == null) return;
@@ -99,6 +103,7 @@ internal static class Program
         _host = null;
     }
 
+    /// <summary>记录日志。</summary>
     private static void Log(Exception? ex, string message)
     {
         var logger = _host?.Services.GetService<ILoggerFactory>()?.CreateLogger("App");

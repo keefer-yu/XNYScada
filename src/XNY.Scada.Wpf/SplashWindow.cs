@@ -7,8 +7,10 @@ namespace XNY.Scada.Wpf;
 /// <summary>启动画面：显示运行时启动步骤</summary>
 public sealed class SplashWindow : Window
 {
+    /// <summary>消息。</summary>
     private readonly TextBlock _message;
 
+    /// <summary>创建闪屏窗口。</summary>
     public SplashWindow()
     {
         Width = 460;
@@ -36,6 +38,7 @@ public sealed class SplashWindow : Window
         };
     }
 
+    /// <summary>消息。</summary>
     public string Message
     {
         set => _message.Text = value;

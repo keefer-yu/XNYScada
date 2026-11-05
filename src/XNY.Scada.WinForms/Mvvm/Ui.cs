@@ -4,28 +4,42 @@ using System.Windows.Input;
 
 namespace XNY.Scada.WinForms.Mvvm;
 
+/// <summary>键类别。</summary>
 public enum ButtonKind
 {
+    /// <summary>默认。</summary>
     Default,
+    /// <summary>主。</summary>
     Primary,
+    /// <summary>危险。</summary>
     Danger
 }
 
 /// <summary>代码式界面构建工具：统一风格，页面代码只描述布局与绑定</summary>
 public static class Ui
 {
+    /// <summary>主。</summary>
     public static readonly Color Primary = Color.FromArgb(0x32, 0x6C, 0xE5);
+    /// <summary>危险。</summary>
     public static readonly Color Danger = Color.FromArgb(0xE5, 0x3E, 0x3E);
+    /// <summary>良品。</summary>
     public static readonly Color Good = Color.FromArgb(0x2E, 0xB8, 0x5C);
+    /// <summary>警告。</summary>
     public static readonly Color Warn = Color.FromArgb(0xF0, 0xA0, 0x20);
+    /// <summary>弱化显示。</summary>
     public static readonly Color Muted = Color.FromArgb(0x71, 0x80, 0x96);
+    /// <summary>标题返回。</summary>
     public static readonly Color HeaderBack = Color.FromArgb(0x1F, 0x2D, 0x3D);
+    /// <summary>菜单返回。</summary>
     public static readonly Color MenuBack = Color.FromArgb(0x26, 0x34, 0x45);
+    /// <summary>页面返回。</summary>
     public static readonly Color PageBack = Color.FromArgb(0xF0, 0xF2, 0xF5);
+    /// <summary>代码字体。</summary>
     public static readonly Font CodeFont = new("Consolas", 10f);
 
     // ---------------- 基础控件 ----------------
 
+    /// <summary>按钮。</summary>
     public static Button Btn(string text, ICommand command, ButtonKind kind = ButtonKind.Default, Func<object?>? parameter = null)
     {
         var b = new Button
@@ -55,6 +69,7 @@ public static class Ui
         return b;
     }
 
+    /// <summary>标签。</summary>
     public static Label Lbl(string text, bool bold = false, Color? color = null) => new()
     {
         Text = text,
@@ -64,6 +79,7 @@ public static class Ui
         Font = bold ? new Font(Control.DefaultFont, FontStyle.Bold) : Control.DefaultFont
     };
 
+    /// <summary>标题。</summary>
     public static Label Title(string text) => new()
     {
         Text = text,
@@ -80,6 +96,7 @@ public static class Ui
         return l;
     }
 
+    /// <summary>文本。</summary>
     public static TextBox Text(INotifyPropertyChanged source, string property, int width = 140)
     {
         var t = new TextBox { Width = width, Margin = new Padding(0, 4, 8, 2) };
@@ -110,6 +127,7 @@ public static class Ui
         return t;
     }
 
+    /// <summary>检查。</summary>
     public static CheckBox Check(string text, INotifyPropertyChanged source, string property)
     {
         var c = new CheckBox { Text = text, AutoSize = true, Margin = new Padding(0, 6, 12, 2) };
@@ -117,6 +135,7 @@ public static class Ui
         return c;
     }
 
+    /// <summary>下拉框。</summary>
     public static ComboBox Combo(IEnumerable items, INotifyPropertyChanged source, string property, int width = 140,
         Func<object, string>? display = null, Func<object, object?>? valueOf = null)
     {
@@ -125,6 +144,7 @@ public static class Ui
         return c;
     }
 
+    /// <summary>日期。</summary>
     public static DateTimePicker Date(INotifyPropertyChanged source, string property)
     {
         var d = new DateTimePicker { Format = DateTimePickerFormat.Short, Width = 120, Margin = new Padding(0, 4, 8, 2) };
@@ -159,6 +179,7 @@ public static class Ui
         return g;
     }
 
+    /// <summary>添加样式。</summary>
     private static void AddStyle(TableLayoutStyleCollection styles, string size, bool rows)
     {
         TableLayoutStyle style = size switch
@@ -235,6 +256,7 @@ public static class Ui
         return t;
     }
 
+    /// <summary>添加到栈。</summary>
     public static void AddToStack(TableLayoutPanel stack, Control c)
     {
         stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -242,6 +264,7 @@ public static class Ui
         stack.Controls.Add(c, 0, stack.RowCount++);
     }
 
+    /// <summary>滚动。</summary>
     public static Panel Scroll(Control content)
     {
         var p = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(8) };
@@ -250,6 +273,7 @@ public static class Ui
         return p;
     }
 
+    /// <summary>标签页。</summary>
     public static TabControl Tabs(params (string Title, Control Content)[] pages)
     {
         var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 4) };

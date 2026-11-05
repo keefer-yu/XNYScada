@@ -10,6 +10,12 @@ using XNY.Scada.Security;
 namespace XNY.Scada.Application.Devices;
 
 /// <summary>设备、点位组、点位、报警定义的配置管理；修改后需调用 <see cref="ApplyAsync"/> 重载通讯</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="deviceManager">设备管理器。</param>
+/// <param name="tags">点位。</param>
+/// <param name="alarmService">报警服务。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="audit">审计。</param>
 public sealed class DeviceConfigService(
     ISqlSugarClient db,
     IDeviceManager deviceManager,
@@ -18,16 +24,22 @@ public sealed class DeviceConfigService(
     IPermissionService permissions,
     IAuditService audit)
 {
+    /// <summary>配置发生变化时触发。</summary>
     public event EventHandler? ConfigChanged;
 
+    /// <summary>获取设备。</summary>
     public Task<List<DeviceEntity>> GetDevicesAsync() => db.Queryable<DeviceEntity>().OrderBy(d => d.Id).ToListAsync();
 
+    /// <summary>获取组。</summary>
     public Task<List<TagGroupEntity>> GetGroupsAsync(long deviceId) => db.Queryable<TagGroupEntity>().Where(g => g.DeviceId == deviceId).ToListAsync();
 
+    /// <summary>获取点位。</summary>
     public Task<List<TagEntity>> GetTagsAsync(long deviceId) => db.Queryable<TagEntity>().Where(t => t.DeviceId == deviceId).OrderBy(t => t.Id).ToListAsync();
 
+    /// <summary>获取报警定义。</summary>
     public Task<List<AlarmDefinitionEntity>> GetAlarmDefinitionsAsync() => db.Queryable<AlarmDefinitionEntity>().ToListAsync();
 
+    /// <summary>保存设备。</summary>
     public async Task<DeviceEntity> SaveDeviceAsync(DeviceEntity device, bool checkPermission = true)
     {
         if (checkPermission) permissions.Demand(Permissions.Device.Edit);
@@ -53,6 +65,7 @@ public sealed class DeviceConfigService(
         return device;
     }
 
+    /// <summary>删除设备。</summary>
     public async Task DeleteDeviceAsync(long deviceId)
     {
         permissions.Demand(Permissions.Device.Edit);
@@ -64,6 +77,7 @@ public sealed class DeviceConfigService(
         ConfigChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>保存组。</summary>
     public async Task<TagGroupEntity> SaveGroupAsync(TagGroupEntity group, bool checkPermission = true)
     {
         if (checkPermission) permissions.Demand(Permissions.Device.Edit);
@@ -104,6 +118,7 @@ public sealed class DeviceConfigService(
         ConfigChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>保存报警定义。</summary>
     public async Task SaveAlarmDefinitionsAsync(IReadOnlyList<AlarmDefinitionEntity> defs, bool checkPermission = true)
     {
         if (checkPermission) permissions.Demand(Permissions.Alarm.Configure);
@@ -136,8 +151,10 @@ public sealed class DeviceConfigService(
 
     // ---- CSV 导入导出 ----
 
+    /// <summary>CSV标题。</summary>
     private const string CsvHeader = "Name,Address,DataType,Length,Scale,Offset,Access,Group,Description";
 
+    /// <summary>导出点位CSV。</summary>
     public async Task ExportTagsCsvAsync(long deviceId, string path)
     {
         var groups = (await GetGroupsAsync(deviceId)).ToDictionary(g => g.Id, g => g.Name);
@@ -187,5 +204,6 @@ public sealed class DeviceConfigService(
         return count;
     }
 
+    /// <summary>转义。</summary>
     private static string Escape(string? s) => string.IsNullOrEmpty(s) ? "" : s.Contains(',') ? $"\"{s}\"" : s;
 }

@@ -6,8 +6,12 @@ using XNY.Scada.Domain.Entities;
 namespace XNY.Scada.Security;
 
 /// <summary>同步权限点到数据库，并初始化内置角色与超级管理员</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="options">配置项。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class SecuritySeeder(ISqlSugarClient db, SecurityOptions options, ILogger<SecuritySeeder> logger)
 {
+    /// <summary>当前角色。</summary>
     private static readonly (string Code, string Name, int Level, string[] Permissions)[] Roles =
     [
         (BuiltInRoles.Operator, "操作员", 10,
@@ -39,6 +43,7 @@ public sealed class SecuritySeeder(ISqlSugarClient db, SecurityOptions options, 
         (BuiltInRoles.SuperAdmin, "超级管理员", 100, [])
     ];
 
+    /// <summary>写入种子数据。</summary>
     public void Seed(IEnumerable<Assembly> permissionAssemblies)
     {
         var defs = PermissionCatalog.Discover(permissionAssemblies.Append(typeof(Permissions).Assembly));

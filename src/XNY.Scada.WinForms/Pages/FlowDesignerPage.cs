@@ -15,9 +15,12 @@ namespace XNY.Scada.WinForms.Pages;
 /// </summary>
 public sealed class FlowDesignerPage : UserControl
 {
+    /// <summary>视图模型。</summary>
     private readonly FlowDesignerViewModel _vm;
+    /// <summary>节点到添加。</summary>
     private NodeDescriptor? _nodeToAdd;
 
+    /// <summary>创建流程设计器页面。</summary>
     public FlowDesignerPage(FlowDesignerViewModel vm)
     {
         _vm = vm;
@@ -78,6 +81,7 @@ public sealed class FlowDesignerPage : UserControl
         };
     }
 
+    /// <summary>节点类型选择器。</summary>
     private Control NodeTypePicker()
     {
         var types = Ui.Combo(_vm.NodeTypes, this.AsNotifier(), nameof(NodeToAdd), 200, d =>
@@ -99,23 +103,31 @@ public sealed class FlowDesignerPage : UserControl
         }
     }
 
+    /// <summary>通知器。</summary>
     private SelfNotifier? _notifier;
 
+    /// <summary>尝试转换通知器。</summary>
     private SelfNotifier AsNotifier() => _notifier ??= new SelfNotifier(this);
 
+    /// <summary>自身通知器。</summary>
+    /// <param name="page">页面。</param>
     private sealed class SelfNotifier(FlowDesignerPage page) : INotifyPropertyChanged
     {
+        /// <summary>节点到添加。</summary>
         public NodeDescriptor? NodeToAdd
         {
             get => page.NodeToAdd;
             set => page.NodeToAdd = value;
         }
 
+        /// <summary>属性发生变化时触发。</summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>引发。</summary>
         public void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
+    /// <summary>添加选中节点类型。</summary>
     private void AddSelectedNodeType(double x, double y)
     {
         if (NodeToAdd == null)
@@ -128,6 +140,7 @@ public sealed class FlowDesignerPage : UserControl
 
     // ---------------- 流程图 ----------------
 
+    /// <summary>构建画布Tab。</summary>
     private Control BuildCanvasTab()
     {
         var canvas = new FlowCanvas(_vm);
@@ -152,6 +165,7 @@ public sealed class FlowDesignerPage : UserControl
 
     // ---------------- 节点表 ----------------
 
+    /// <summary>构建节点列表Tab。</summary>
     private Control BuildNodesTab()
     {
         var nodes = new BoundGrid<FlowNodeViewModel>(_vm.Nodes, true,
@@ -185,6 +199,7 @@ public sealed class FlowDesignerPage : UserControl
 
     // ---------------- 连线表 ----------------
 
+    /// <summary>构建连线列表Tab。</summary>
     private Control BuildEdgesTab()
     {
         var edges = new BoundGrid<FlowEdgeViewModel>(_vm.Edges, false,
@@ -225,6 +240,7 @@ public sealed class FlowDesignerPage : UserControl
             ("110", Ui.Card("编辑选中连线", editor)));
     }
 
+    /// <summary>节点文本。</summary>
     private static string NodeText(object n)
     {
         var node = (FlowNodeViewModel)n;
@@ -233,6 +249,7 @@ public sealed class FlowDesignerPage : UserControl
 
     // ---------------- 流程属性 / 触发器 / 变量 ----------------
 
+    /// <summary>构建流Tab。</summary>
     private Control BuildFlowTab()
     {
         var form = Ui.Form(110,
@@ -265,6 +282,7 @@ public sealed class FlowDesignerPage : UserControl
                 Ui.Rows(("auto", Ui.Bar(Ui.Btn("添加变量", _vm.AddVariableCommand))), ("*", variables)))));
     }
 
+    /// <summary>构建问题Tab。</summary>
     private Control BuildIssuesTab()
     {
         var issues = new BoundGrid<ValidationIssue>(_vm.Issues, false,
@@ -281,6 +299,7 @@ public sealed class FlowDesignerPage : UserControl
             ("*", issues));
     }
 
+    /// <summary>构建模拟Tab。</summary>
     private Control BuildSimulationTab()
     {
         var trace = new BoundGrid<NodeTrace>(_vm.SimulationTrace, false,
@@ -310,6 +329,7 @@ public sealed class FlowDesignerPage : UserControl
 
     // ---------------- 节点属性面板 ----------------
 
+    /// <summary>构建属性面板。</summary>
     private Control BuildPropertyPanel()
     {
         var host = new Panel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(4) };
@@ -390,4 +410,7 @@ public sealed class FlowDesignerPage : UserControl
     }
 }
 
+/// <summary>键值一对行。</summary>
+/// <param name="Key">键。</param>
+/// <param name="Value">值。</param>
 public sealed record KeyValuePairRow(string Key, string Value);

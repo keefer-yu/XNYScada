@@ -2,10 +2,13 @@ using System.Reflection;
 
 namespace XNY.Scada.Device.Runtime;
 
+/// <summary>驱动注册。</summary>
 public sealed class DriverRegistry : IDriverRegistry
 {
+    /// <summary>驱动。</summary>
     private readonly Dictionary<string, DriverDescriptor> _drivers = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>创建驱动注册。</summary>
     public DriverRegistry(IEnumerable<Assembly> assemblies)
     {
         foreach (var type in assemblies.Distinct().SelectMany(PluginLoader.SafeGetTypes))
@@ -23,10 +26,13 @@ public sealed class DriverRegistry : IDriverRegistry
         }
     }
 
+    /// <summary>驱动。</summary>
     public IReadOnlyList<DriverDescriptor> Drivers => _drivers.Values.OrderBy(d => d.Vendor).ThenBy(d => d.Key).ToList();
 
+    /// <summary>查找。</summary>
     public DriverDescriptor? Find(string key) => _drivers.GetValueOrDefault(key);
 
+    /// <summary>创建。</summary>
     public IPlcDriver Create(string key, IReadOnlyDictionary<string, string> options)
     {
         var d = Find(key) ?? throw new InvalidOperationException($"未找到驱动 {key}，请确认插件已放入 plugins 目录");

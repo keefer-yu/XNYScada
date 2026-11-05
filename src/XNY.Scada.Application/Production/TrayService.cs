@@ -5,14 +5,20 @@ using XNY.Scada.Domain.Services;
 
 namespace XNY.Scada.Application.Production;
 
+/// <summary>托盘服务。</summary>
+/// <param name="db">数据库客户端。</param>
 public sealed class TrayService(ISqlSugarClient db) : ITrayService
 {
+    /// <summary>锁定。</summary>
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    /// <summary>托盘发生变化时触发。</summary>
     public event EventHandler<string>? TrayChanged;
 
+    /// <summary>当前托盘代码。</summary>
     public string? CurrentTrayCode { get; private set; }
 
+    /// <summary>获取或创建托盘。</summary>
     public async Task<TrayEntity> GetOrCreateTrayAsync(string trayCode, int rows, int cols)
     {
         if (string.IsNullOrWhiteSpace(trayCode)) throw new ArgumentException("托盘号不能为空");
@@ -41,8 +47,10 @@ public sealed class TrayService(ISqlSugarClient db) : ITrayService
         }
     }
 
+    /// <summary>获取托盘。</summary>
     public Task<TrayEntity?> GetTrayAsync(string trayCode) => db.Queryable<TrayEntity>().FirstAsync(t => t.TrayCode == trayCode)!;
 
+    /// <summary>绑定单元格。</summary>
     public async Task<BindResult> BindCellAsync(string trayCode, int position, string cellCode)
     {
         await _lock.WaitAsync();
@@ -79,9 +87,11 @@ public sealed class TrayService(ISqlSugarClient db) : ITrayService
         }
     }
 
+    /// <summary>获取单元格。</summary>
     public async Task<IReadOnlyList<TrayCellEntity>> GetCellsAsync(string trayCode) =>
         await db.Queryable<TrayCellEntity>().Where(c => c.TrayCode == trayCode && c.Active).OrderBy(c => c.Position).ToListAsync();
 
+    /// <summary>解绑。</summary>
     public async Task<int> UnbindAsync(string trayCode, int? position)
     {
         await _lock.WaitAsync();
@@ -110,6 +120,7 @@ public sealed class TrayService(ISqlSugarClient db) : ITrayService
         }
     }
 
+    /// <summary>完成托盘。</summary>
     public async Task CompleteTrayAsync(string trayCode)
     {
         await db.Updateable<TrayEntity>()
@@ -119,6 +130,7 @@ public sealed class TrayService(ISqlSugarClient db) : ITrayService
         TrayChanged?.Invoke(this, trayCode);
     }
 
+    /// <summary>查找托盘的单元格。</summary>
     public async Task<string?> FindTrayOfCellAsync(string cellCode) =>
         (await db.Queryable<TrayCellEntity>().FirstAsync(c => c.CellCode == cellCode && c.Active))?.TrayCode;
 }

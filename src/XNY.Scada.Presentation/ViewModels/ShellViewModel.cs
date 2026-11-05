@@ -11,29 +11,49 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Presentation.ViewModels;
 
+/// <summary>菜单项页面的视图模型。</summary>
+/// <param name="key">键。</param>
+/// <param name="title">标题。</param>
+/// <param name="glyph">图标。</param>
+/// <param name="permission">权限。</param>
+/// <param name="viewModelType">视图模型类型。</param>
 public sealed partial class MenuItemViewModel(string key, string title, string glyph, string permission, Type viewModelType) : ObservableObject
 {
+    /// <summary>菜单项键。</summary>
     public string Key { get; } = key;
+    /// <summary>标题。</summary>
     public string Title { get; } = title;
+    /// <summary>图标。</summary>
     public string Glyph { get; } = glyph;
+    /// <summary>权限。</summary>
     public string Permission { get; } = permission;
+    /// <summary>视图模型类型。</summary>
     public Type ViewModelType { get; } = viewModelType;
 
+    /// <summary>是否可见。</summary>
     [ObservableProperty]
     private bool _isVisible;
 
+    /// <summary>是否选中。</summary>
     [ObservableProperty]
     private bool _isSelected;
 }
 
+/// <summary>主界面页面的视图模型。</summary>
 public sealed partial class ShellViewModel : ViewModelBase, INavigationService
 {
+    /// <summary>服务。</summary>
     private readonly IServiceProvider _services;
+    /// <summary>报警。</summary>
     private readonly IAlarmService _alarms;
+    /// <summary>参数。</summary>
     private readonly SystemParamService _params;
+    /// <summary>配方。</summary>
     private readonly RecipeService _recipes;
+    /// <summary>空闲。</summary>
     private readonly IdleLogoutMonitor _idle;
 
+    /// <summary>创建主界面视图模型。</summary>
     public ShellViewModel(
         ViewModelContext context,
         IServiceProvider services,
@@ -96,53 +116,74 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         StartClock();
     }
 
+    /// <summary>已导航发生变化时触发。</summary>
     public event EventHandler<string>? Navigated;
 
+    /// <summary>标题。</summary>
     public override string Title => "XNY 新能源 SCADA";
 
+    /// <summary>登录。</summary>
     public LoginViewModel Login { get; }
 
+    /// <summary>菜单项。</summary>
     public ObservableCollection<MenuItemViewModel> MenuItems { get; }
 
+    /// <summary>待处理确认。</summary>
     public ObservableCollection<ConfirmRequest> PendingConfirmations { get; } = [];
 
+    /// <summary>当前键。</summary>
     public string? CurrentKey { get; private set; }
 
+    /// <summary>当前页面。</summary>
     [ObservableProperty]
     private ViewModelBase? _currentPage;
 
+    /// <summary>是否登录可见。</summary>
     [ObservableProperty]
     private bool _isLoginVisible;
 
+    /// <summary>用户显示。</summary>
     [ObservableProperty]
     private string _userDisplay = "未登录";
 
+    /// <summary>是否已记录在。</summary>
     [ObservableProperty]
     private bool _isLoggedIn;
 
+    /// <summary>当前时间。</summary>
     [ObservableProperty]
     private DateTime _now = DateTime.Now;
 
+    /// <summary>活动报警数量。</summary>
     [ObservableProperty]
     private int _activeAlarmCount;
 
+    /// <summary>最新报警。</summary>
     [ObservableProperty]
     private string? _latestAlarm;
 
+    /// <summary>机台标题。</summary>
     public string MachineTitle =>
         $"{_params.Get("MachineName", "SCADA")}  [{MachineTypes.DisplayNames.GetValueOrDefault(_params.MachineType, _params.MachineType)}]  工位 {_params.Station}";
 
+    /// <summary>配方名称。</summary>
     public string RecipeName => _recipes.Current is { } r ? $"{r.Name} ({r.Code} v{r.Version})" : "未激活配方";
 
+    /// <summary>显示登录命令。</summary>
     public IRelayCommand ShowLoginCommand { get; }
+    /// <summary>关闭登录命令。</summary>
     public IRelayCommand CloseLoginCommand { get; }
+    /// <summary>退出登录命令。</summary>
     public IAsyncRelayCommand LogoutCommand { get; }
+    /// <summary>更改密码命令。</summary>
     public IAsyncRelayCommand ChangePasswordCommand { get; }
+    /// <summary>导航命令。</summary>
     public IRelayCommand<MenuItemViewModel> NavigateCommand { get; }
 
     /// <summary>界面层在鼠标/键盘活动时调用，用于自动登出计时</summary>
     public void NotifyActivity() => _idle.NotifyActivity();
 
+    /// <summary>导航。</summary>
     public void Navigate(string key)
     {
         var item = MenuItems.FirstOrDefault(m => m.Key == key);
@@ -163,6 +204,7 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         Navigated?.Invoke(this, key);
     }
 
+    /// <summary>更新用户。</summary>
     private void UpdateUser()
     {
         IsLoggedIn = Context.User.IsAuthenticated;
@@ -174,6 +216,7 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         if (CurrentPage == null) Navigate("Dashboard");
     }
 
+    /// <summary>更新报警。</summary>
     private void UpdateAlarms()
     {
         var active = _alarms.ActiveAlarms;
@@ -181,6 +224,7 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         LatestAlarm = active.FirstOrDefault() is { } a ? $"[{a.RaisedAt:HH:mm:ss}] {a.Message}" : null;
     }
 
+    /// <summary>启动时钟。</summary>
     private void StartClock()
     {
         var timer = new Timer(_ => Ui.BeginInvoke(() =>
@@ -192,8 +236,10 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         _clock = timer;
     }
 
+    /// <summary>时钟。</summary>
     private Timer? _clock;
 
+    /// <summary>更改密码。</summary>
     private async Task ChangePasswordAsync()
     {
         var change = Dialogs.RequestPasswordChange();
@@ -203,6 +249,7 @@ public sealed partial class ShellViewModel : ViewModelBase, INavigationService
         else Dialogs.ShowInfo("密码已修改");
     }
 
+    /// <summary>释放资源。</summary>
     public override void Dispose()
     {
         _clock?.Dispose();

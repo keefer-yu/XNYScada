@@ -3,37 +3,60 @@ using XNY.Scada.Domain.Entities;
 
 namespace XNY.Scada.Security;
 
+/// <summary>用户信息。</summary>
+/// <param name="User">当前用户。</param>
+/// <param name="RoleIds">角色标识。</param>
 public sealed record UserInfo(UserEntity User, IReadOnlyList<long> RoleIds);
 
+/// <summary>I用户管理员服务。</summary>
 public interface IUserAdminService
 {
+    /// <summary>获取用户。</summary>
     Task<List<UserInfo>> GetUsersAsync();
 
+    /// <summary>获取角色。</summary>
     Task<List<RoleEntity>> GetRolesAsync();
 
+    /// <summary>获取权限。</summary>
     Task<List<PermissionEntity>> GetPermissionsAsync();
 
+    /// <summary>获取角色权限。</summary>
     Task<List<string>> GetRolePermissionsAsync(long roleId);
 
+    /// <summary>获取角色数据范围。</summary>
     Task<List<RoleDataScopeEntity>> GetRoleDataScopesAsync(long roleId);
 
+    /// <summary>保存用户。</summary>
     Task<UserEntity> SaveUserAsync(UserEntity user, IReadOnlyList<long> roleIds, string? newPassword);
 
+    /// <summary>删除用户。</summary>
     Task DeleteUserAsync(long userId);
 
+    /// <summary>重置枚举密码。</summary>
     Task ResetPasswordAsync(long userId, string newPassword);
 
+    /// <summary>解锁。</summary>
     Task UnlockAsync(long userId);
 
+    /// <summary>保存角色。</summary>
     Task<RoleEntity> SaveRoleAsync(RoleEntity role);
 
+    /// <summary>删除角色。</summary>
     Task DeleteRoleAsync(long roleId);
 
+    /// <summary>设置角色权限。</summary>
     Task SetRolePermissionsAsync(long roleId, IReadOnlyCollection<string> permissionCodes);
 
+    /// <summary>设置角色数据范围。</summary>
     Task SetRoleDataScopesAsync(long roleId, IReadOnlyCollection<DataScope> scopes);
 }
 
+/// <summary>用户管理员服务。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="currentUser">当前用户。</param>
+/// <param name="audit">审计。</param>
+/// <param name="options">配置项。</param>
 public sealed class UserAdminService(
     ISqlSugarClient db,
     IPermissionService permissions,
@@ -41,6 +64,7 @@ public sealed class UserAdminService(
     IAuditService audit,
     SecurityOptions options) : IUserAdminService
 {
+    /// <summary>获取用户。</summary>
     public async Task<List<UserInfo>> GetUsersAsync()
     {
         var users = await db.Queryable<UserEntity>().OrderBy(u => u.Id).ToListAsync();
@@ -48,16 +72,21 @@ public sealed class UserAdminService(
         return users.Select(u => new UserInfo(u, links.Where(l => l.UserId == u.Id).Select(l => l.RoleId).ToList())).ToList();
     }
 
+    /// <summary>获取角色。</summary>
     public Task<List<RoleEntity>> GetRolesAsync() => db.Queryable<RoleEntity>().OrderBy(r => r.Level).ToListAsync();
 
+    /// <summary>获取权限。</summary>
     public Task<List<PermissionEntity>> GetPermissionsAsync() => db.Queryable<PermissionEntity>().OrderBy(p => p.Sort).ToListAsync();
 
+    /// <summary>获取角色权限。</summary>
     public Task<List<string>> GetRolePermissionsAsync(long roleId) =>
         db.Queryable<RolePermissionEntity>().Where(r => r.RoleId == roleId).Select(r => r.PermissionCode).ToListAsync();
 
+    /// <summary>获取角色数据范围。</summary>
     public Task<List<RoleDataScopeEntity>> GetRoleDataScopesAsync(long roleId) =>
         db.Queryable<RoleDataScopeEntity>().Where(r => r.RoleId == roleId).ToListAsync();
 
+    /// <summary>保存用户。</summary>
     public async Task<UserEntity> SaveUserAsync(UserEntity user, IReadOnlyList<long> roleIds, string? newPassword)
     {
         permissions.Demand(Permissions.User.Manage);
@@ -102,6 +131,7 @@ public sealed class UserAdminService(
         return user;
     }
 
+    /// <summary>删除用户。</summary>
     public async Task DeleteUserAsync(long userId)
     {
         permissions.Demand(Permissions.User.Manage);
@@ -114,6 +144,7 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.UserChange, $"user:{user.UserName}", "存在", "已删除");
     }
 
+    /// <summary>重置枚举密码。</summary>
     public async Task ResetPasswordAsync(long userId, string newPassword)
     {
         permissions.Demand(Permissions.User.ResetPassword);
@@ -127,6 +158,7 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.UserChange, $"user:{user.UserName}", newValue: "重置密码");
     }
 
+    /// <summary>解锁。</summary>
     public async Task UnlockAsync(long userId)
     {
         permissions.Demand(Permissions.User.Manage);
@@ -134,6 +166,7 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.UserChange, $"user:{userId}", newValue: "解锁");
     }
 
+    /// <summary>保存角色。</summary>
     public async Task<RoleEntity> SaveRoleAsync(RoleEntity role)
     {
         permissions.Demand(Permissions.User.ManageRole);
@@ -159,6 +192,7 @@ public sealed class UserAdminService(
         return role;
     }
 
+    /// <summary>删除角色。</summary>
     public async Task DeleteRoleAsync(long roleId)
     {
         permissions.Demand(Permissions.User.ManageRole);
@@ -171,6 +205,7 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.RoleChange, $"role:{role.Code}", "存在", "已删除");
     }
 
+    /// <summary>设置角色权限。</summary>
     public async Task SetRolePermissionsAsync(long roleId, IReadOnlyCollection<string> permissionCodes)
     {
         permissions.Demand(Permissions.User.ManageRole);
@@ -188,6 +223,7 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.RoleChange, $"role:{role.Code}:permissions", old, permissionCodes);
     }
 
+    /// <summary>设置角色数据范围。</summary>
     public async Task SetRoleDataScopesAsync(long roleId, IReadOnlyCollection<DataScope> scopes)
     {
         permissions.Demand(Permissions.User.ManageRole);
@@ -197,8 +233,10 @@ public sealed class UserAdminService(
         await audit.LogAsync(AuditActions.RoleChange, $"role:{roleId}:scopes", newValue: scopes);
     }
 
+    /// <summary>判断类型超级。</summary>
     private bool IsSuper() => currentUser.Roles.Any(r => r.Code == BuiltInRoles.SuperAdmin);
 
+    /// <summary>确保能否分配角色。</summary>
     private async Task EnsureCanAssignRolesAsync(IReadOnlyList<long> roleIds)
     {
         if (IsSuper() || roleIds.Count == 0) return;
@@ -206,6 +244,7 @@ public sealed class UserAdminService(
         if (maxLevel >= currentUser.MaxRoleLevel) throw new ScadaSecurityException("不能分配等级不低于自身的角色");
     }
 
+    /// <summary>确保能否管理用户。</summary>
     private async Task EnsureCanManageUserAsync(long userId)
     {
         if (IsSuper() || userId == currentUser.User?.Id) return;

@@ -8,8 +8,10 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>用户管理员页面。</summary>
 public sealed class UserAdminPage : UserControl
 {
+    /// <summary>创建用户管理员页面。</summary>
     public UserAdminPage(UserAdminViewModel vm)
     {
         var users = new BoundGrid<UserRow>(vm.Users, false,
@@ -167,8 +169,10 @@ public sealed class UserAdminPage : UserControl
     }
 }
 
+/// <summary>审计页面。</summary>
 public sealed class AuditPage : UserControl
 {
+    /// <summary>创建审计页面。</summary>
     public AuditPage(AuditViewModel vm)
     {
         var logs = new BoundGrid<AuditLogEntity>(vm.Logs, false,
@@ -203,8 +207,10 @@ public sealed class AuditPage : UserControl
     }
 }
 
+/// <summary>系统页面。</summary>
 public sealed class SystemPage : UserControl
 {
+    /// <summary>创建系统页面。</summary>
     public SystemPage(SystemViewModel vm)
     {
         var machine = Ui.Stack(

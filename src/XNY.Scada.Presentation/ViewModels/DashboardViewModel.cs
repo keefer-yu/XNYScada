@@ -12,19 +12,31 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Presentation.ViewModels;
 
+/// <summary>看板页面的视图模型。</summary>
 public sealed partial class DashboardViewModel : ViewModelBase
 {
+    /// <summary>设备。</summary>
     private readonly IDeviceManager _devices;
+    /// <summary>点位。</summary>
     private readonly ITagService _tags;
+    /// <summary>生产。</summary>
     private readonly IProductionService _production;
+    /// <summary>查询。</summary>
     private readonly ProductionQueryService _query;
+    /// <summary>托盘。</summary>
     private readonly ITrayService _trays;
+    /// <summary>配方。</summary>
     private readonly RecipeService _recipes;
+    /// <summary>参数。</summary>
     private readonly SystemParamService _params;
+    /// <summary>引擎。</summary>
     private readonly IFlowEngine _engine;
+    /// <summary>报警。</summary>
     private readonly IAlarmService _alarms;
+    /// <summary>审计。</summary>
     private readonly IAuditService _audit;
 
+    /// <summary>创建看板视图模型。</summary>
     public DashboardViewModel(
         ViewModelContext context, IDeviceManager devices, ITagService tags, IProductionService production,
         ProductionQueryService query, ITrayService trays, RecipeService recipes, SystemParamService parameters,
@@ -59,47 +71,82 @@ public sealed partial class DashboardViewModel : ViewModelBase
         });
     }
 
+    /// <summary>标题。</summary>
     public override string Title => "主监控";
 
+    /// <summary>设备数量。</summary>
     public ObservableCollection<DeviceStatusItem> Devices { get; } = [];
+    /// <summary>托盘单元格。</summary>
     public ObservableCollection<TrayCellItem> TrayCells { get; } = [];
+    /// <summary>档位。</summary>
     public ObservableCollection<BinItem> Bins { get; } = [];
+    /// <summary>NG数量。</summary>
     public ObservableCollection<NgCountItem> NgCounts { get; } = [];
+    /// <summary>主界面关键点位。</summary>
     public ObservableCollection<TagValueItem> KeyTags { get; } = [];
+    /// <summary>最近记录。</summary>
     public ObservableCollection<CellRecordEntity> RecentRecords { get; } = [];
+    /// <summary>活动报警。</summary>
     public ObservableCollection<AlarmRecordEntity> ActiveAlarms { get; } = [];
+    /// <summary>允许手动触发的流程。</summary>
     public ObservableCollection<string> ManualFlows { get; } = [];
 
+    /// <summary>机台类型名称。</summary>
     [ObservableProperty] private string _machineTypeName = "";
+    /// <summary>配方名称。</summary>
     [ObservableProperty] private string _recipeName = "";
+    /// <summary>显示托盘。</summary>
     [ObservableProperty] private bool _showTray;
+    /// <summary>显示档位。</summary>
     [ObservableProperty] private bool _showBins;
+    /// <summary>显示NG。</summary>
     [ObservableProperty] private bool _showNg;
+    /// <summary>托盘行。</summary>
     [ObservableProperty] private int _trayRows = 1;
+    /// <summary>托盘列数。</summary>
     [ObservableProperty] private int _trayCols = 1;
+    /// <summary>当前托盘代码。</summary>
     [ObservableProperty] private string? _currentTrayCode;
+    /// <summary>托盘单元格数量。</summary>
     [ObservableProperty] private int _trayCellCount;
+    /// <summary>总计。</summary>
     [ObservableProperty] private int _total;
+    /// <summary>OK。</summary>
     [ObservableProperty] private int _ok;
+    /// <summary>NG。</summary>
     [ObservableProperty] private int _ng;
+    /// <summary>产出。</summary>
     [ObservableProperty] private double _yield;
+    /// <summary>每小时产量。</summary>
     [ObservableProperty] private double _uph;
+    /// <summary>OEE。</summary>
     [ObservableProperty] private double _oee;
+    /// <summary>可用性。</summary>
     [ObservableProperty] private double _availability;
+    /// <summary>性能。</summary>
     [ObservableProperty] private double _performance;
+    /// <summary>质量。</summary>
     [ObservableProperty] private double _quality;
 
+    /// <summary>引擎运行。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartProductionCommand), nameof(StopProductionCommand))]
     private bool _engineRunning;
 
+    /// <summary>起点生产命令。</summary>
     public IAsyncRelayCommand StartProductionCommand { get; }
+    /// <summary>停留生产命令。</summary>
     public IAsyncRelayCommand StopProductionCommand { get; }
+    /// <summary>重置计数器命令。</summary>
     public IAsyncRelayCommand ResetCountersCommand { get; }
+    /// <summary>重置档位命令。</summary>
     public IAsyncRelayCommand<BinItem> ResetBinCommand { get; }
+    /// <summary>触发器流命令。</summary>
     public IAsyncRelayCommand<string> TriggerFlowCommand { get; }
+    /// <summary>确认全部命令。</summary>
     public IAsyncRelayCommand AcknowledgeAllCommand { get; }
 
+    /// <summary>处理激活。</summary>
     protected override async Task OnActivatedAsync()
     {
         var layout = _params.Layout;
@@ -127,6 +174,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         StartRefresh(TimeSpan.FromSeconds(1), RefreshAsync);
     }
 
+    /// <summary>构建档位。</summary>
     private void BuildBins(MachineLayout layout)
     {
         Bins.Clear();
@@ -137,6 +185,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         }
     }
 
+    /// <summary>刷新。</summary>
     private async Task RefreshAsync()
     {
         RecipeName = _recipes.Current is { } r ? $"{r.Name} v{r.Version}" : "未激活配方";
@@ -184,6 +233,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         Uph = Math.Round(oee.Uph, 0);
     }
 
+    /// <summary>加载托盘。</summary>
     private async Task LoadTrayAsync(string trayCode)
     {
         if (!ShowTray) return;
@@ -198,6 +248,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         }
     }
 
+    /// <summary>启动生产。</summary>
     private async Task StartProductionAsync()
     {
         await _engine.StartAsync();
@@ -205,6 +256,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         EngineRunning = true;
     }
 
+    /// <summary>停止生产。</summary>
     private async Task StopProductionAsync()
     {
         if (!Dialogs.Confirm("停止生产后流程将不再响应 PLC 请求，确定停止？")) return;
@@ -213,6 +265,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         EngineRunning = false;
     }
 
+    /// <summary>重置枚举计数器。</summary>
     private async Task ResetCountersAsync()
     {
         if (!Dialogs.Confirm("确定清零全部产量计数？")) return;
@@ -220,6 +273,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         await _audit.LogAsync(AuditActions.Production, "counters", newValue: "清零");
     }
 
+    /// <summary>重置枚举档位。</summary>
     private async Task ResetBinAsync(BinItem? bin)
     {
         if (bin == null) return;
@@ -227,6 +281,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
         await _audit.LogAsync(AuditActions.Production, $"bin:{bin.BinNo}", bin.Count.ToString(), "0");
     }
 
+    /// <summary>触发流。</summary>
     private async Task TriggerFlowAsync(string? code)
     {
         if (string.IsNullOrEmpty(code)) return;

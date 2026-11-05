@@ -4,12 +4,14 @@ using XNY.Scada.Flow.Runtime;
 
 namespace XNY.Scada.Flow.Nodes.Builtin;
 
+/// <summary>只读标记节点。</summary>
 [FlowNode("ReadTag", "读点位", "通讯", Description = "从 PLC 读取点位值到变量")]
 [NodeProperty("Tag", "点位", Kind = NodePropertyKind.Tag, Required = true, Order = 0)]
 [NodeProperty("Variable", "保存到变量", Kind = NodePropertyKind.Variable, Required = true, Order = 1)]
 [NodeProperty("FromDevice", "直接读设备", Kind = NodePropertyKind.Bool, Default = "true", Description = "false 时读取轮询缓存", Order = 2)]
 public sealed class ReadTagNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var tag = ctx.Render(ctx.RequireProp("Tag"));
@@ -18,11 +20,13 @@ public sealed class ReadTagNode : INodeHandler
     }
 }
 
+/// <summary>只读点位节点。</summary>
 [FlowNode("ReadTags", "批量读点位", "通讯", Description = "每行：变量 = 点位全名")]
 [NodeProperty("Mappings", "映射", Kind = NodePropertyKind.Assignments, Required = true, Description = "Voltage = Dev1.Voltage")]
 [NodeProperty("FromDevice", "直接读设备", Kind = NodePropertyKind.Bool, Default = "true")]
 public sealed class ReadTagsNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var fromDevice = ctx.PropBool("FromDevice", true);
@@ -34,11 +38,13 @@ public sealed class ReadTagsNode : INodeHandler
     }
 }
 
+/// <summary>写标记节点。</summary>
 [FlowNode("WriteTag", "写点位", "通讯", Description = "表达式结果写入 PLC")]
 [NodeProperty("Tag", "点位", Kind = NodePropertyKind.Tag, Required = true, Order = 0)]
 [NodeProperty("Value", "值表达式", Kind = NodePropertyKind.Expression, Required = true, Order = 1)]
 public sealed class WriteTagNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         await ctx.WriteTagAsync(ctx.Render(ctx.RequireProp("Tag")), ctx.EvalProp("Value"), ct);
@@ -46,10 +52,12 @@ public sealed class WriteTagNode : INodeHandler
     }
 }
 
+/// <summary>写点位节点。</summary>
 [FlowNode("WriteTags", "批量写点位", "通讯", Description = "每行：点位全名 = 值表达式，按顺序写入")]
 [NodeProperty("Mappings", "映射", Kind = NodePropertyKind.Assignments, Required = true, Description = "Dev1.BinNo = BinNo")]
 public sealed class WriteTagsNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         foreach (var (tag, expr) in NodeContext.ParseAssignments(ctx.Prop("Mappings")))
@@ -60,12 +68,14 @@ public sealed class WriteTagsNode : INodeHandler
     }
 }
 
+/// <summary>等待信号节点。</summary>
 [FlowNode("WaitSignal", "等待信号", "通讯", Ports = "next,timeout", Description = "轮询直到条件成立或超时")]
 [NodeProperty("Condition", "条件表达式", Kind = NodePropertyKind.Expression, Required = true, Description = "如 {Tag:PLC.Ready} == true", Order = 0)]
 [NodeProperty("Timeout", "超时(ms)", Kind = NodePropertyKind.Int, Default = "10000", Description = "0 表示一直等待", Order = 1)]
 [NodeProperty("PollMs", "轮询周期(ms)", Kind = NodePropertyKind.Int, Default = "20", Order = 2)]
 public sealed class WaitSignalNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var condition = ctx.RequireProp("Condition");
@@ -93,6 +103,7 @@ public sealed class WaitSignalNode : INodeHandler
 [NodeProperty("Timeout", "等待复位超时(ms)", Kind = NodePropertyKind.Int, Default = "5000", Order = 4)]
 public sealed class HandshakeNode : INodeHandler
 {
+    /// <summary>执行。</summary>
     public async Task<NodeResult> ExecuteAsync(NodeContext ctx, CancellationToken ct)
     {
         var request = ctx.Render(ctx.RequireProp("RequestTag"));

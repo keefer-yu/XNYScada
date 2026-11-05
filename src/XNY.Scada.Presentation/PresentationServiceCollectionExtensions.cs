@@ -7,6 +7,7 @@ using XNY.Scada.Presentation.ViewModels;
 
 namespace XNY.Scada.Presentation;
 
+/// <summary>表示层服务集合的扩展方法。</summary>
 public static class PresentationServiceCollectionExtensions
 {
     /// <summary>

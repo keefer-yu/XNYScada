@@ -7,12 +7,17 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Presentation.ViewModels;
 
+/// <summary>诊断页面的视图模型。</summary>
 public sealed partial class DiagnosticsViewModel : ViewModelBase
 {
+    /// <summary>设备。</summary>
     private readonly IDeviceManager _devices;
+    /// <summary>点位。</summary>
     private readonly ITagService _tags;
+    /// <summary>配置。</summary>
     private readonly DeviceConfigService _config;
 
+    /// <summary>创建诊断视图模型。</summary>
     public DiagnosticsViewModel(ViewModelContext context, IDeviceManager devices, ITagService tags, DeviceConfigService config, IDriverRegistry drivers) : base(context)
     {
         _devices = devices;
@@ -28,28 +33,40 @@ public sealed partial class DiagnosticsViewModel : ViewModelBase
         });
     }
 
+    /// <summary>标题。</summary>
     public override string Title => "通讯诊断";
 
+    /// <summary>驱动。</summary>
     public IReadOnlyList<DriverDescriptor> Drivers { get; }
 
+    /// <summary>设备数量。</summary>
     public ObservableCollection<DeviceStatusItem> Devices { get; } = [];
 
+    /// <summary>点位数量。</summary>
     public ObservableCollection<TagValueItem> Tags { get; } = [];
 
+    /// <summary>已筛选点位。</summary>
     public ObservableCollection<TagValueItem> FilteredTags { get; } = [];
 
+    /// <summary>筛选。</summary>
     [ObservableProperty] private string? _filter;
 
+    /// <summary>选中标记。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(WriteCommand), nameof(ReadCommand))]
     private TagValueItem? _selectedTag;
 
+    /// <summary>写值。</summary>
     [ObservableProperty] private string _writeValue = "";
 
+    /// <summary>写命令。</summary>
     public IAsyncRelayCommand WriteCommand { get; }
+    /// <summary>只读命令。</summary>
     public IAsyncRelayCommand ReadCommand { get; }
+    /// <summary>重载命令。</summary>
     public IAsyncRelayCommand ReloadCommand { get; }
 
+    /// <summary>处理激活。</summary>
     protected override Task OnActivatedAsync()
     {
         Refresh();
@@ -61,8 +78,10 @@ public sealed partial class DiagnosticsViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    /// <summary>当筛选变化时更新关联状态。</summary>
     partial void OnFilterChanged(string? value) => ApplyFilter();
 
+    /// <summary>刷新。</summary>
     private void Refresh()
     {
         var statuses = _devices.GetStatuses();
@@ -87,12 +106,14 @@ public sealed partial class DiagnosticsViewModel : ViewModelBase
         }
     }
 
+    /// <summary>应用筛选。</summary>
     private void ApplyFilter()
     {
         var f = Filter?.Trim();
         Replace(FilteredTags, string.IsNullOrEmpty(f) ? Tags : Tags.Where(t => t.FullName.Contains(f, StringComparison.OrdinalIgnoreCase) || t.Address.Contains(f, StringComparison.OrdinalIgnoreCase)));
     }
 
+    /// <summary>读取。</summary>
     private async Task ReadAsync()
     {
         if (SelectedTag == null) return;
@@ -100,6 +121,7 @@ public sealed partial class DiagnosticsViewModel : ViewModelBase
         StatusMessage = r.IsSuccess ? $"{SelectedTag.FullName} = {r.Value}" : $"读取失败：{r.Message}";
     }
 
+    /// <summary>写入。</summary>
     private async Task WriteAsync()
     {
         if (SelectedTag == null) return;

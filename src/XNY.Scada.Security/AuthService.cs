@@ -4,27 +4,47 @@ using XNY.Scada.Domain.Entities;
 
 namespace XNY.Scada.Security;
 
+/// <summary>登录结果。</summary>
+/// <param name="Success">是否成功。</param>
+/// <param name="Message">消息。</param>
+/// <param name="MustChangePassword">必须更改密码。</param>
 public sealed record LoginResult(bool Success, string Message, bool MustChangePassword = false)
 {
+    /// <summary>失败。</summary>
     public static LoginResult Fail(string message) => new(false, message);
 }
 
+/// <summary>I认证服务。</summary>
 public interface IAuthService
 {
+    /// <summary>登录。</summary>
     Task<LoginResult> LoginAsync(string userName, string password);
 
+    /// <summary>登录按卡。</summary>
     Task<LoginResult> LoginByCardAsync(string cardNo);
 
+    /// <summary>登出。</summary>
     Task LogoutAsync(string reason = "");
 
+    /// <summary>更改密码。</summary>
     Task<string?> ChangePasswordAsync(string oldPassword, string newPassword);
 
     /// <summary>电子签名：校验签名人身份与权限（不改变当前登录用户），返回签名人用户名</summary>
     Task<SignatureResult> VerifySignatureAsync(string userName, string password, string requiredPermission);
 }
 
+/// <summary>签名结果。</summary>
+/// <param name="Success">是否成功。</param>
+/// <param name="Message">消息。</param>
+/// <param name="Signer">电子签名确认人。</param>
 public sealed record SignatureResult(bool Success, string Message, string? Signer);
 
+/// <summary>认证服务。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="session">会话。</param>
+/// <param name="audit">审计。</param>
+/// <param name="options">配置项。</param>
+/// <param name="logger">日志记录器。</param>
 public sealed class AuthService(
     ISqlSugarClient db,
     UserSession session,
@@ -32,6 +52,7 @@ public sealed class AuthService(
     SecurityOptions options,
     ILogger<AuthService> logger) : IAuthService
 {
+    /// <summary>登录。</summary>
     public async Task<LoginResult> LoginAsync(string userName, string password)
     {
         var user = await db.Queryable<UserEntity>().FirstAsync(u => u.UserName == userName);
@@ -44,6 +65,7 @@ public sealed class AuthService(
         return await SignInAsync(user!, "密码");
     }
 
+    /// <summary>登录按卡。</summary>
     public async Task<LoginResult> LoginByCardAsync(string cardNo)
     {
         cardNo = cardNo.Trim();
@@ -59,6 +81,7 @@ public sealed class AuthService(
         return await SignInAsync(user, "刷卡");
     }
 
+    /// <summary>检查凭据。</summary>
     private async Task<LoginResult> CheckCredentialAsync(UserEntity? user, string password)
     {
         if (user == null) return LoginResult.Fail("用户名或密码错误");
@@ -80,6 +103,7 @@ public sealed class AuthService(
         return new LoginResult(true, "");
     }
 
+    /// <summary>签名在。</summary>
     private async Task<LoginResult> SignInAsync(UserEntity user, string method)
     {
         var roleIds = await db.Queryable<UserRoleEntity>().Where(ur => ur.UserId == user.Id).Select(ur => ur.RoleId).ToListAsync();
@@ -100,6 +124,7 @@ public sealed class AuthService(
         return new LoginResult(true, expired ? "密码已过期，请修改密码" : "登录成功", expired);
     }
 
+    /// <summary>登出。</summary>
     public async Task LogoutAsync(string reason = "")
     {
         if (!session.IsAuthenticated) return;
@@ -107,6 +132,7 @@ public sealed class AuthService(
         session.SignOut();
     }
 
+    /// <summary>更改密码。</summary>
     public async Task<string?> ChangePasswordAsync(string oldPassword, string newPassword)
     {
         var user = session.User;
@@ -122,6 +148,7 @@ public sealed class AuthService(
         return null;
     }
 
+    /// <summary>校验签名。</summary>
     public async Task<SignatureResult> VerifySignatureAsync(string userName, string password, string requiredPermission)
     {
         var user = await db.Queryable<UserEntity>().FirstAsync(u => u.UserName == userName);

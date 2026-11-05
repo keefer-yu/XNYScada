@@ -5,8 +5,10 @@ using System.Text.Unicode;
 
 namespace XNY.Scada.Domain;
 
+/// <summary>JSON。</summary>
 public static class Json
 {
+    /// <summary>选项。</summary>
     public static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
@@ -18,8 +20,10 @@ public static class Json
         AllowTrailingCommas = true
     };
 
+    /// <summary>序列化。</summary>
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
 
+    /// <summary>反序列化。</summary>
     public static T? Deserialize<T>(string? json) =>
         string.IsNullOrWhiteSpace(json) ? default : JsonSerializer.Deserialize<T>(json, Options);
 
@@ -35,6 +39,7 @@ public static class Json
         _ => null
     };
 
+    /// <summary>转换为字典。</summary>
     public static Dictionary<string, object?> ToDictionary(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return new();

@@ -3,8 +3,10 @@ using XNY.Scada.Domain;
 
 namespace XNY.Scada.Device;
 
+/// <summary>标记值转换器。</summary>
 public static class TagValueConverter
 {
+    /// <summary>转换为布尔。</summary>
     public static bool ToBool(object? value) => value switch
     {
         null => false,
@@ -43,6 +45,7 @@ public static class TagValueConverter
         return d * tag.Scale + tag.Offset;
     }
 
+    /// <summary>解析。</summary>
     public static object? Parse(TagDataType type, string? text)
     {
         if (text == null) return null;

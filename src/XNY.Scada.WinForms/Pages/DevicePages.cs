@@ -6,8 +6,10 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>设备配置页面。</summary>
 public sealed class DeviceConfigPage : UserControl
 {
+    /// <summary>创建设备配置页面。</summary>
     public DeviceConfigPage(DeviceConfigViewModel vm)
     {
         var devices = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false, ItemHeight = 20 };
@@ -125,8 +127,10 @@ public sealed class DeviceConfigPage : UserControl
     }
 }
 
+/// <summary>诊断页面。</summary>
 public sealed class DiagnosticsPage : UserControl
 {
+    /// <summary>创建诊断页面。</summary>
     public DiagnosticsPage(DiagnosticsViewModel vm)
     {
         var devices = new BoundGrid<DeviceStatusItem>(vm.Devices, false,
@@ -165,8 +169,10 @@ public sealed class DiagnosticsPage : UserControl
     }
 }
 
+/// <summary>MES页面。</summary>
 public sealed class MesPage : UserControl
 {
+    /// <summary>创建MES页面。</summary>
     public MesPage(MesViewModel vm)
     {
         var list = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false, ItemHeight = 20 };

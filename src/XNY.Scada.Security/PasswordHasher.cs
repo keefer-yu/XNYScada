@@ -5,10 +5,14 @@ namespace XNY.Scada.Security;
 /// <summary>PBKDF2-SHA256 加盐哈希，格式：迭代次数.盐.哈希（Base64）</summary>
 public static class PasswordHasher
 {
+    /// <summary>迭代次数。</summary>
     private const int Iterations = 100_000;
+    /// <summary>盐值大小。</summary>
     private const int SaltSize = 16;
+    /// <summary>哈希大小。</summary>
     private const int HashSize = 32;
 
+    /// <summary>计算哈希。</summary>
     public static string Hash(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(SaltSize);
@@ -16,6 +20,7 @@ public static class PasswordHasher
         return $"{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
+    /// <summary>校验。</summary>
     public static bool Verify(string password, string stored)
     {
         var parts = stored.Split('.');

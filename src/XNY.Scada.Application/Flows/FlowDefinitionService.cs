@@ -13,6 +13,12 @@ namespace XNY.Scada.Application.Flows;
 /// 流程定义管理：草稿保存、校验、发布（版本不可变）、回滚、导入导出。
 /// 同时作为流程引擎的 <see cref="IFlowDefinitionStore"/>。
 /// </summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="registry">注册。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="currentUser">当前用户。</param>
+/// <param name="audit">审计。</param>
+/// <param name="engine">引擎。</param>
 public sealed class FlowDefinitionService(
     ISqlSugarClient db,
     INodeRegistry registry,
@@ -21,10 +27,13 @@ public sealed class FlowDefinitionService(
     IAuditService audit,
     Lazy<IFlowEngine> engine) : IFlowDefinitionStore
 {
+    /// <summary>流发生变化时触发。</summary>
     public event EventHandler<string>? FlowChanged;
 
+    /// <summary>列出。</summary>
     public Task<List<FlowDefinitionEntity>> ListAsync() => db.Queryable<FlowDefinitionEntity>().OrderBy(f => f.Code).ToListAsync();
 
+    /// <summary>获取版本。</summary>
     public Task<List<FlowVersionEntity>> GetVersionsAsync(string code) =>
         db.Queryable<FlowVersionEntity>().Where(v => v.FlowCode == code).OrderBy(v => v.Version, OrderByType.Desc).ToListAsync();
 
@@ -35,12 +44,14 @@ public sealed class FlowDefinitionService(
         return v == null ? null : WithVersion(FlowDocument.FromJson(v.Json), v.Version);
     }
 
+    /// <summary>获取版本。</summary>
     public async Task<FlowDocument?> GetVersionAsync(string code, int version)
     {
         var v = await db.Queryable<FlowVersionEntity>().FirstAsync(x => x.FlowCode == code && x.Version == version);
         return v == null ? null : WithVersion(FlowDocument.FromJson(v.Json), v.Version);
     }
 
+    /// <summary>校验。</summary>
     public IReadOnlyList<ValidationIssue> Validate(FlowDocument doc)
     {
         var issues = FlowValidator.Validate(doc, registry).ToList();
@@ -129,6 +140,7 @@ public sealed class FlowDefinitionService(
         FlowChanged?.Invoke(this, code);
     }
 
+    /// <summary>设置启用。</summary>
     public async Task SetEnabledAsync(string code, bool enabled)
     {
         permissions.Demand(Permissions.Flow.Control);
@@ -138,6 +150,7 @@ public sealed class FlowDefinitionService(
         FlowChanged?.Invoke(this, code);
     }
 
+    /// <summary>删除。</summary>
     public async Task DeleteAsync(string code)
     {
         permissions.Demand(Permissions.Flow.Publish);
@@ -177,6 +190,7 @@ public sealed class FlowDefinitionService(
         FlowChanged?.Invoke(this, doc.Code);
     }
 
+    /// <summary>确保脚本权限。</summary>
     private void EnsureScriptPermission(FlowDocument doc)
     {
         foreach (var n in doc.Nodes)
@@ -186,6 +200,7 @@ public sealed class FlowDefinitionService(
         }
     }
 
+    /// <summary>附带版本。</summary>
     private static FlowDocument WithVersion(FlowDocument doc, int version)
     {
         doc.Version = version;
@@ -194,6 +209,7 @@ public sealed class FlowDefinitionService(
 
     // ---- IFlowDefinitionStore ----
 
+    /// <summary>获取已发布。</summary>
     public async Task<IReadOnlyList<PublishedFlow>> GetPublishedAsync()
     {
         var defs = await db.Queryable<FlowDefinitionEntity>().Where(f => f.PublishedVersion > 0).ToListAsync();
@@ -206,12 +222,14 @@ public sealed class FlowDefinitionService(
         return result;
     }
 
+    /// <summary>获取已发布。</summary>
     public async Task<PublishedFlow?> GetPublishedAsync(string code)
     {
         var d = await db.Queryable<FlowDefinitionEntity>().FirstAsync(f => f.Code == code && f.PublishedVersion > 0);
         return d == null ? null : await LoadPublishedAsync(d);
     }
 
+    /// <summary>加载已发布。</summary>
     private async Task<PublishedFlow?> LoadPublishedAsync(FlowDefinitionEntity d)
     {
         var v = await db.Queryable<FlowVersionEntity>().FirstAsync(x => x.FlowCode == d.Code && x.Version == d.PublishedVersion);
@@ -222,8 +240,11 @@ public sealed class FlowDefinitionService(
     }
 }
 
+/// <summary>流实例日志接收器。</summary>
+/// <param name="db">数据库客户端。</param>
 public sealed class FlowInstanceLogSink(ISqlSugarClient db) : IFlowInstanceLogSink
 {
+    /// <summary>写入。</summary>
     public Task WriteAsync(FlowInstance instance) =>
         db.Insertable(new FlowInstanceLogEntity
         {

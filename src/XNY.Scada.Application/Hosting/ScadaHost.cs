@@ -20,18 +20,23 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Application.Hosting;
 
+/// <summary>SCADA宿主的配置项。</summary>
 public sealed class ScadaHostOptions
 {
     /// <summary>扫描 [Permission] 的程序集（界面层 ViewModel 所在程序集等）</summary>
     public List<Assembly> PermissionAssemblies { get; } = [];
 
+    /// <summary>是否启动时是否自动导入机型模板。</summary>
     public bool AutoImportTemplate { get; set; } = true;
 
+    /// <summary>是否启动时是否运行流程引擎。</summary>
     public bool StartFlowEngine { get; set; } = true;
 
+    /// <summary>插件目录。</summary>
     public string PluginDirectory { get; set; } = "plugins";
 }
 
+/// <summary>SCADA宿主。</summary>
 public static class ScadaHost
 {
     /// <summary>注册 SCADA 全部核心服务（与界面无关）</summary>

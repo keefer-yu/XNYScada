@@ -6,6 +6,12 @@ using XNY.Scada.Security;
 
 namespace XNY.Scada.Application.Mes;
 
+/// <summary>MES配置服务。</summary>
+/// <param name="db">数据库客户端。</param>
+/// <param name="client">客户区。</param>
+/// <param name="outbox">发件箱。</param>
+/// <param name="permissions">权限。</param>
+/// <param name="audit">审计。</param>
 public sealed class MesConfigService(
     ISqlSugarClient db,
     IMesClient client,
@@ -13,8 +19,10 @@ public sealed class MesConfigService(
     IPermissionService permissions,
     IAuditService audit)
 {
+    /// <summary>列出。</summary>
     public Task<List<MesInterfaceEntity>> ListAsync() => db.Queryable<MesInterfaceEntity>().OrderBy(m => m.Code).ToListAsync();
 
+    /// <summary>保存。</summary>
     public async Task<MesInterfaceEntity> SaveAsync(MesInterfaceEntity entity, bool checkPermission = true)
     {
         if (checkPermission) permissions.Demand(Permissions.Mes.Edit);
@@ -39,6 +47,7 @@ public sealed class MesConfigService(
         return entity;
     }
 
+    /// <summary>删除。</summary>
     public async Task DeleteAsync(long id)
     {
         permissions.Demand(Permissions.Mes.Edit);
@@ -48,12 +57,14 @@ public sealed class MesConfigService(
         await client.ReloadAsync();
     }
 
+    /// <summary>测试。</summary>
     public Task<MesResult> TestAsync(MesInterfaceEntity entity, string argsJson)
     {
         permissions.Demand(Permissions.Mes.Test);
         return client.TestAsync(entity, Json.ToDictionary(argsJson));
     }
 
+    /// <summary>获取日志。</summary>
     public Task<List<MesCallLogEntity>> GetLogsAsync(string? code, DateTime from, DateTime to, int limit = 500) =>
         db.Queryable<MesCallLogEntity>()
             .Where(l => l.CreatedAt >= from && l.CreatedAt <= to)
@@ -62,6 +73,7 @@ public sealed class MesConfigService(
             .Take(limit)
             .ToListAsync();
 
+    /// <summary>获取发件箱。</summary>
     public Task<List<MesOutboxEntity>> GetOutboxAsync(MesOutboxStatus? status = MesOutboxStatus.Pending) =>
         db.Queryable<MesOutboxEntity>()
             .WhereIF(status != null, o => o.Status == status)
@@ -69,8 +81,10 @@ public sealed class MesConfigService(
             .Take(1000)
             .ToListAsync();
 
+    /// <summary>刷出发件箱。</summary>
     public Task<int> FlushOutboxAsync() => outbox.FlushAsync();
 
+    /// <summary>重新排队失败。</summary>
     public async Task RequeueFailedAsync()
     {
         permissions.Demand(Permissions.Mes.Edit);

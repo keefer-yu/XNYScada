@@ -11,11 +11,15 @@ using XNY.Scada.Wpf.Services;
 
 namespace XNY.Scada.Wpf;
 
+/// <summary>应用。</summary>
 public partial class App
 {
+    /// <summary>宿主。</summary>
     private IHost? _host;
+    /// <summary>单实例。</summary>
     private Mutex? _singleInstance;
 
+    /// <summary>处理启动。</summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -69,6 +73,7 @@ public partial class App
         }
     }
 
+    /// <summary>关闭宿主。</summary>
     private async Task ShutdownHostAsync()
     {
         if (_host != null)
@@ -90,6 +95,7 @@ public partial class App
         Shutdown();
     }
 
+    /// <summary>处理调度器未处理异常。</summary>
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log(e.Exception, "界面异常");
@@ -97,6 +103,7 @@ public partial class App
         e.Handled = true;
     }
 
+    /// <summary>记录日志。</summary>
     private void Log(Exception? ex, string message)
     {
         var logger = _host?.Services.GetService<ILoggerFactory>()?.CreateLogger("App");

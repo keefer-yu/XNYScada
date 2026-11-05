@@ -5,8 +5,10 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>报警页面。</summary>
 public sealed class AlarmPage : UserControl
 {
+    /// <summary>创建报警页面。</summary>
     public AlarmPage(AlarmViewModel vm)
     {
         var active = new BoundGrid<AlarmRecordEntity>(vm.ActiveAlarms, false,
@@ -41,8 +43,10 @@ public sealed class AlarmPage : UserControl
     }
 }
 
+/// <summary>生产页面。</summary>
 public sealed class ProductionPage : UserControl
 {
+    /// <summary>创建生产页面。</summary>
     public ProductionPage(ProductionViewModel vm)
     {
         var records = new BoundGrid<CellRecordEntity>(vm.Records, false,

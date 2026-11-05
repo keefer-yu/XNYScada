@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace XNY.Scada.Security;
 
+/// <summary>安全服务集合的扩展方法。</summary>
 public static class SecurityServiceCollectionExtensions
 {
+    /// <summary>添加SCADA安全。</summary>
     public static IServiceCollection AddScadaSecurity(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(configuration.GetSection(SecurityOptions.Section).Get<SecurityOptions>() ?? new SecurityOptions());

@@ -6,10 +6,13 @@ using XNY.Scada.WinForms.Mvvm;
 
 namespace XNY.Scada.WinForms.Pages;
 
+/// <summary>看板页面。</summary>
 public sealed class DashboardPage : UserControl
 {
+    /// <summary>视图模型。</summary>
     private readonly DashboardViewModel _vm;
 
+    /// <summary>创建看板页面。</summary>
     public DashboardPage(DashboardViewModel vm)
     {
         _vm = vm;
@@ -121,6 +124,7 @@ public sealed class DashboardPage : UserControl
             ("240", Ui.Cols(("2*", Ui.Card("实时生产记录", records)), ("*", Ui.Card("当前报警", alarms))))));
     }
 
+    /// <summary>指标。</summary>
     private GroupBox Kpi(string caption, string property, Color? color)
     {
         var value = new Label
@@ -134,6 +138,7 @@ public sealed class DashboardPage : UserControl
         return Ui.Card(caption, panel);
     }
 
+    /// <summary>档位卡。</summary>
     private Control BinCard(BinItem bin, List<IDisposable> bindings)
     {
         var card = new Panel { Width = 160, Height = 112, Margin = new Padding(4), Padding = new Padding(8), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
@@ -162,9 +167,12 @@ public sealed class DashboardPage : UserControl
     /// <summary>托盘矩阵：按行列绘制穴位，有电芯为绿色</summary>
     private sealed class TrayMatrix : Panel
     {
+        /// <summary>视图模型。</summary>
         private readonly DashboardViewModel _vm;
+        /// <summary>提示。</summary>
         private readonly ToolTip _tip = new();
 
+        /// <summary>创建托盘矩阵。</summary>
         public TrayMatrix(DashboardViewModel vm)
         {
             _vm = vm;
@@ -195,6 +203,7 @@ public sealed class DashboardPage : UserControl
             };
         }
 
+        /// <summary>单元格矩形。</summary>
         private RectangleF CellRect(int index)
         {
             var cols = Math.Max(1, _vm.TrayCols);
@@ -204,6 +213,7 @@ public sealed class DashboardPage : UserControl
             return new RectangleF(2 + index % cols * w, 2 + index / cols * h, w, h);
         }
 
+        /// <summary>命中测试测试。</summary>
         private TrayCellItem? HitTest(Point p)
         {
             for (var i = 0; i < _vm.TrayCells.Count; i++)
@@ -213,6 +223,7 @@ public sealed class DashboardPage : UserControl
             return null;
         }
 
+        /// <summary>处理绘制。</summary>
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);

@@ -8,68 +8,115 @@ using XNY.Scada.Mes;
 
 namespace XNY.Scada.Flow.Runtime;
 
+/// <summary>流运行时信息。</summary>
+/// <param name="Code">编码。</param>
+/// <param name="Name">名称。</param>
+/// <param name="Version">版本号。</param>
+/// <param name="PendingVersion">等待空闲后切换的版本。</param>
+/// <param name="Enabled">是否启用。</param>
+/// <param name="RunningCount">正在运行的实例数。</param>
+/// <param name="CompletedCount">累计完成次数。</param>
+/// <param name="FailedCount">连续失败次数。</param>
+/// <param name="LastRunAt">最近一次运行时间。</param>
+/// <param name="LastError">最近一次错误。</param>
 public sealed record FlowRuntimeInfo(string Code, string Name, int Version, int? PendingVersion, bool Enabled, int RunningCount, long CompletedCount, long FailedCount, DateTime? LastRunAt, string? LastError);
 
+/// <summary>已发布流程的运行时：加载、触发、热切换，并广播节点与实例事件。</summary>
 public interface IFlowEngine
 {
+    /// <summary>流程实例开始发生变化时触发。</summary>
     event EventHandler<FlowInstance>? InstanceStarted;
 
+    /// <summary>流程实例结束发生变化时触发。</summary>
     event EventHandler<FlowInstance>? InstanceCompleted;
 
+    /// <summary>节点开始执行发生变化时触发。</summary>
     event EventHandler<FlowNodeEventArgs>? NodeStarted;
 
+    /// <summary>节点执行结束发生变化时触发。</summary>
     event EventHandler<FlowNodeEventArgs>? NodeCompleted;
 
+    /// <summary>是否正在运行。</summary>
     bool IsRunning { get; }
 
+    /// <summary>流程调试器。</summary>
     FlowDebugger Debugger { get; }
 
+    /// <summary>启动。</summary>
     Task StartAsync(CancellationToken ct = default);
 
+    /// <summary>停止。</summary>
     Task StopAsync();
 
     /// <summary>重新加载某个流程的发布版本；若流程正在运行，则在空闲后切换</summary>
     Task ReloadAsync(string flowCode);
 
+    /// <summary>重新加载全部。</summary>
     Task ReloadAllAsync();
 
+    /// <summary>获取流程。</summary>
     IReadOnlyList<FlowRuntimeInfo> GetFlows();
 
+    /// <summary>获取运行实例。</summary>
     IReadOnlyList<FlowInstance> GetRunningInstances();
 
+    /// <summary>触发。</summary>
     Task<FlowInstance?> TriggerAsync(string flowCode, IReadOnlyDictionary<string, object?>? input = null, string source = "Manual", CancellationToken ct = default);
 
     /// <summary>模拟运行草稿流程（不注册触发器，不写实例日志）</summary>
     Task<FlowInstance> RunDocumentAsync(FlowDocument document, IReadOnlyDictionary<string, object?>? input = null, CancellationToken ct = default);
 
+    /// <summary>取消。</summary>
     void Cancel(string instanceId);
 }
 
+/// <summary>流程引擎。</summary>
 public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
 {
+    /// <summary>流运行时。</summary>
+    /// <param name="flow">流。</param>
     private sealed class FlowRuntime(PublishedFlow flow)
     {
+        /// <summary>流。</summary>
         public PublishedFlow Flow = flow;
+        /// <summary>待处理。</summary>
         public PublishedFlow? Pending;
+        /// <summary>队列。</summary>
         public readonly SemaphoreSlim Queue = new(1, 1);
+        /// <summary>运行。</summary>
         public int Running;
+        /// <summary>完成。</summary>
         public long Completed;
+        /// <summary>失败。</summary>
         public long Failed;
+        /// <summary>最近一次运行时间。</summary>
         public DateTime? LastRunAt;
+        /// <summary>最近一次错误。</summary>
         public string? LastError;
+        /// <summary>定时器。</summary>
         public readonly List<Timer> Timers = [];
     }
 
+    /// <summary>存储。</summary>
     private readonly IFlowDefinitionStore _store;
+    /// <summary>执行器。</summary>
     private readonly FlowExecutor _executor;
+    /// <summary>点位。</summary>
     private readonly ITagService _tags;
+    /// <summary>日志接收器。</summary>
     private readonly IFlowInstanceLogSink? _logSink;
+    /// <summary>MES回调。</summary>
     private readonly MesCallbackListener? _mesCallback;
+    /// <summary>日志。</summary>
     private readonly ILogger<FlowEngine> _logger;
+    /// <summary>流程。</summary>
     private readonly ConcurrentDictionary<string, FlowRuntime> _flows = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>运行。</summary>
     private readonly ConcurrentDictionary<string, (FlowInstance Instance, CancellationTokenSource Cts)> _running = new();
+    /// <summary>引擎取消源。</summary>
     private CancellationTokenSource _engineCts = new();
 
+    /// <summary>创建流程引擎。</summary>
     public FlowEngine(
         IFlowDefinitionStore store,
         FlowExecutor executor,
@@ -90,15 +137,22 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         _executor.NodeCompleted += (s, e) => NodeCompleted?.Invoke(this, e);
     }
 
+    /// <summary>流程实例开始发生变化时触发。</summary>
     public event EventHandler<FlowInstance>? InstanceStarted;
+    /// <summary>流程实例结束发生变化时触发。</summary>
     public event EventHandler<FlowInstance>? InstanceCompleted;
+    /// <summary>节点开始执行发生变化时触发。</summary>
     public event EventHandler<FlowNodeEventArgs>? NodeStarted;
+    /// <summary>节点执行结束发生变化时触发。</summary>
     public event EventHandler<FlowNodeEventArgs>? NodeCompleted;
 
+    /// <summary>是否正在运行。</summary>
     public bool IsRunning { get; private set; }
 
+    /// <summary>流程调试器。</summary>
     public FlowDebugger Debugger { get; }
 
+    /// <summary>启动。</summary>
     public async Task StartAsync(CancellationToken ct = default)
     {
         if (IsRunning) return;
@@ -116,6 +170,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>停止。</summary>
     public async Task StopAsync()
     {
         if (!IsRunning) return;
@@ -130,6 +185,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         _logger.LogInformation("流程引擎已停止");
     }
 
+    /// <summary>加载全部。</summary>
     private async Task LoadAllAsync()
     {
         foreach (var rt in _flows.Values) DisposeTimers(rt);
@@ -142,6 +198,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>重新加载全部。</summary>
     public async Task ReloadAllAsync()
     {
         var published = await _store.GetPublishedAsync();
@@ -152,6 +209,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>重新加载。</summary>
     public async Task ReloadAsync(string flowCode)
     {
         var f = await _store.GetPublishedAsync(flowCode);
@@ -163,6 +221,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         await ApplyAsync(f);
     }
 
+    /// <summary>应用。</summary>
     private Task ApplyAsync(PublishedFlow f)
     {
         if (!_flows.TryGetValue(f.Code, out var rt))
@@ -187,6 +246,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         return Task.CompletedTask;
     }
 
+    /// <summary>切换到。</summary>
     private void SwitchTo(FlowRuntime rt, PublishedFlow f)
     {
         DisposeTimers(rt);
@@ -196,6 +256,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         _logger.LogInformation("流程 {Flow} 已切换到 v{Version}", f.Code, f.Version);
     }
 
+    /// <summary>启动定时器。</summary>
     private void StartTimers(FlowRuntime rt)
     {
         foreach (var t in rt.Flow.Document.Triggers.Where(t => t.Enabled && t.Type == TriggerType.Timer && t.IntervalMs > 0))
@@ -208,12 +269,14 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>释放资源定时器。</summary>
     private static void DisposeTimers(FlowRuntime rt)
     {
         foreach (var t in rt.Timers) t.Dispose();
         rt.Timers.Clear();
     }
 
+    /// <summary>当标记变化时更新关联状态。</summary>
     private void OnTagChanged(object? sender, TagChangedEventArgs e)
     {
         if (e.NewValue.Quality != TagQuality.Good) return;
@@ -237,6 +300,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>处理MES回调。</summary>
     private void OnMesCallback(object? sender, MesCallbackEventArgs e)
     {
         foreach (var rt in _flows.Values)
@@ -249,6 +313,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>条件OK。</summary>
     private bool ConditionOk(TriggerDef t, IReadOnlyDictionary<string, object?>? vars = null)
     {
         if (string.IsNullOrWhiteSpace(t.Condition)) return true;
@@ -263,12 +328,14 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>触发。</summary>
     private void Fire(FlowRuntime rt, string source, string? station, IReadOnlyDictionary<string, object?>? input)
     {
         if (!rt.Flow.Enabled) return;
         _ = RunAsync(rt, source, station, input, _engineCts.Token);
     }
 
+    /// <summary>触发。</summary>
     public async Task<FlowInstance?> TriggerAsync(string flowCode, IReadOnlyDictionary<string, object?>? input = null, string source = "Manual", CancellationToken ct = default)
     {
         if (!_flows.TryGetValue(flowCode, out var rt)) throw new FlowException($"流程未发布或不存在: {flowCode}");
@@ -276,6 +343,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         return await RunAsync(rt, source, null, input, linked.Token);
     }
 
+    /// <summary>运行。</summary>
     private async Task<FlowInstance?> RunAsync(FlowRuntime rt, string source, string? station, IReadOnlyDictionary<string, object?>? input, CancellationToken ct)
     {
         var doc = rt.Flow.Document;
@@ -319,6 +387,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>执行。</summary>
     private async Task ExecuteAsync(FlowInstance instance, CancellationToken ct)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -346,6 +415,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         InstanceCompleted?.Invoke(this, instance);
     }
 
+    /// <summary>处理实例已完成。</summary>
     private void OnInstanceFinished(FlowInstance instance)
     {
         if (!IsRunning || instance.IsSimulation) return;
@@ -363,6 +433,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>运行文档。</summary>
     public async Task<FlowInstance> RunDocumentAsync(FlowDocument document, IReadOnlyDictionary<string, object?>? input = null, CancellationToken ct = default)
     {
         var instance = new FlowInstance(document, "Simulation", document.Station, input, true);
@@ -370,6 +441,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         return instance;
     }
 
+    /// <summary>运行子级流。</summary>
     public async Task<FlowInstance> RunSubFlowAsync(string flowCode, IReadOnlyDictionary<string, object?> input, FlowInstance parent, CancellationToken ct)
     {
         FlowDocument doc;
@@ -387,14 +459,17 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         return instance;
     }
 
+    /// <summary>获取流程。</summary>
     public IReadOnlyList<FlowRuntimeInfo> GetFlows() => _flows.Values
         .Select(rt => new FlowRuntimeInfo(rt.Flow.Code, rt.Flow.Name, rt.Flow.Version, rt.Pending?.Version, rt.Flow.Enabled,
             rt.Running, Interlocked.Read(ref rt.Completed), Interlocked.Read(ref rt.Failed), rt.LastRunAt, rt.LastError))
         .OrderBy(f => f.Code)
         .ToList();
 
+    /// <summary>获取运行实例。</summary>
     public IReadOnlyList<FlowInstance> GetRunningInstances() => _running.Values.Select(v => v.Instance).ToList();
 
+    /// <summary>取消。</summary>
     public void Cancel(string instanceId)
     {
         if (_running.TryGetValue(instanceId, out var r))
@@ -404,6 +479,7 @@ public sealed class FlowEngine : IFlowEngine, IFlowRunner, IAsyncDisposable
         }
     }
 
+    /// <summary>释放资源。</summary>
     public async ValueTask DisposeAsync()
     {
         await StopAsync();

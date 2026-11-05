@@ -4,6 +4,7 @@ using XNY.Scada.Device.Hsl;
 
 namespace XNY.Scada.Device.Runtime;
 
+/// <summary>设备运行时的扩展方法。</summary>
 public static class DeviceRuntimeExtensions
 {
     /// <summary>内置驱动程序集 + 插件目录中的程序集</summary>
@@ -13,6 +14,7 @@ public static class DeviceRuntimeExtensions
             .Distinct()
             .ToList();
 
+    /// <summary>添加设备运行时。</summary>
     public static IServiceCollection AddDeviceRuntime(this IServiceCollection services, string pluginDirectory = "plugins")
     {
         services.AddSingleton<IDriverRegistry>(_ => new DriverRegistry(GetDriverAssemblies(pluginDirectory)));
