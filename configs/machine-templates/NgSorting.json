@@ -1,0 +1,169 @@
+{
+  "MachineType": "NgSorting",
+  "Name": "NG 挑选机（标准模板）",
+  "Description": "电芯到位 → 条码校验 → MES 状态查询 → 按配方规格判定 NG 代码 → 按 NgBoxMap 映射到 NG 料盒（0=良品通过）→ 记录。",
+  "Params": {
+    "MachineName": "NG挑选机-01",
+    "LineCode": "L01",
+    "StationCode": "ST01"
+  },
+  "Layout": {
+    "ShowTray": false,
+    "ShowBins": false,
+    "ShowNg": true,
+    "NgBoxCount": 4,
+    "KeyTags": [ "PLC1.Auto", "PLC1.CellCode", "PLC1.Voltage", "PLC1.IR", "PLC1.BoxNo", "PLC1.BoxFull" ],
+    "ManualFlows": []
+  },
+  "Devices": [
+    {
+      "Name": "PLC1",
+      "DriverKey": "Simulator",
+      "Description": "主控 PLC（现场改为实际驱动）",
+      "Options": { "Instance": "NgSorting" },
+      "Groups": [
+        {
+          "Name": "Handshake",
+          "ScanIntervalMs": 50,
+          "Tags": [
+            { "Name": "CellReq", "Address": "M0", "DataType": "Bool", "Access": "Read", "Description": "电芯到位请求（PLC→上位）" },
+            { "Name": "CellDone", "Address": "M1", "DataType": "Bool", "Description": "判定完成（上位→PLC）" },
+            { "Name": "BoxNo", "Address": "D10", "DataType": "Int16", "Description": "目标料盒 0=良品 1..N=NG 料盒" },
+            { "Name": "CellCode", "Address": "D100", "DataType": "String", "Length": 32, "Access": "Read", "Description": "电芯条码" },
+            { "Name": "Voltage", "Address": "D14", "DataType": "Float", "Access": "Read", "Description": "电压 V" },
+            { "Name": "IR", "Address": "D16", "DataType": "Float", "Access": "Read", "Description": "内阻 mΩ" },
+            { "Name": "BoxFull", "Address": "M20", "DataType": "Bool", "Access": "Read", "Description": "NG 料盒满（PLC→上位）" }
+          ]
+        },
+        {
+          "Name": "Status",
+          "ScanIntervalMs": 200,
+          "Tags": [
+            { "Name": "Auto", "Address": "M100", "DataType": "Bool", "Access": "Read", "Description": "自动运行" },
+            { "Name": "EStop", "Address": "M101", "DataType": "Bool", "Access": "Read", "Description": "急停" },
+            { "Name": "AirLow", "Address": "M102", "DataType": "Bool", "Access": "Read", "Description": "气压低" }
+          ]
+        }
+      ]
+    }
+  ],
+  "Alarms": [
+    { "TagName": "PLC1.EStop", "Kind": "Bit", "Level": "Critical", "Message": "急停按下" },
+    { "TagName": "PLC1.AirLow", "Kind": "Bit", "Level": "Error", "Message": "气源压力不足" }
+  ],
+  "Recipes": [
+    {
+      "Code": "NG-STD",
+      "Name": "标准 NG 挑选",
+      "ProductModel": "LFP-280Ah",
+      "Activate": true,
+      "Params": {
+        "VoltageMin": 3.2,
+        "VoltageMax": 3.65,
+        "IrMax": 0.3,
+        "NgBoxMap": { "NG_V_LOW": 1, "NG_V_HIGH": 1, "NG_IR": 2, "NG_MES": 3, "NG_BARCODE": 4 }
+      }
+    }
+  ],
+  "MesInterfaces": [
+    {
+      "Code": "CellQuery",
+      "Name": "电芯状态查询",
+      "Url": "http://mes.local/api/cell/query",
+      "Method": "POST",
+      "RequestTemplate": "{\"cellCode\":\"${CellCode}\"}",
+      "ResponseMapJson": "{\"Code\":\"code\",\"Msg\":\"message\",\"Status\":\"data.status\"}",
+      "SuccessExpression": "Code == 0 && Status == 'OK'",
+      "TimeoutMs": 3000,
+      "RetryCount": 1,
+      "Enabled": false
+    },
+    {
+      "Code": "NgUpload",
+      "Name": "NG 结果上传",
+      "Url": "http://mes.local/api/cell/ng",
+      "Method": "POST",
+      "RequestTemplate": "{\"cellCode\":\"${CellCode}\",\"ngCode\":\"${NgCode}\",\"box\":${BoxNo}}",
+      "ResponseMapJson": "{\"Code\":\"code\",\"Msg\":\"message\"}",
+      "SuccessExpression": "Code == 0",
+      "TimeoutMs": 3000,
+      "RetryCount": 1,
+      "CacheWhenOffline": true,
+      "Enabled": false
+    }
+  ],
+  "Flows": [
+    {
+      "Code": "NS_Cell",
+      "Name": "NG 挑选",
+      "Description": "规格判定表达式与 NG 料盒映射均来自配方参数，修改配方即可调整挑选标准",
+      "Station": "ST01",
+      "Concurrency": "Queue",
+      "TimeoutMs": 30000,
+      "StartNodeId": "read",
+      "Triggers": [ { "Type": "TagRisingEdge", "Tag": "PLC1.CellReq" } ],
+      "Nodes": [
+        { "Id": "read", "Type": "ReadTags", "Name": "读电芯数据", "X": 40, "Y": 40, "Properties": { "Mappings": "CellCode = PLC1.CellCode\nVoltage = PLC1.Voltage\nIR = PLC1.IR" } },
+        { "Id": "check", "Type": "BarcodeCheck", "Name": "条码校验", "X": 40, "Y": 130, "Properties": { "Value": "CellCode", "Regex": "^[A-Z0-9]{10,32}$", "MinLength": "10" } },
+        { "Id": "mes", "Type": "MesCall", "Name": "MES 状态查询", "X": 40, "Y": 220, "Properties": { "InterfaceCode": "CellQuery", "Args": "CellCode = CellCode" } },
+        { "Id": "spec", "Type": "SetVariable", "Name": "规格判定", "X": 40, "Y": 310, "Properties": { "Assignments": "NgCode = if(Voltage < {Recipe:VoltageMin}, 'NG_V_LOW', if(Voltage > {Recipe:VoltageMax}, 'NG_V_HIGH', if(IR > {Recipe:IrMax}, 'NG_IR', 'OK')))\nNgReason = concat(NgCode, ' V=', format(Voltage, '0.000'), ' IR=', format(IR, '0.000'))" } },
+        { "Id": "judge", "Type": "NgJudge", "Name": "NG 判定/料盒", "X": 40, "Y": 400, "Properties": { "NgCode": "NgCode", "MapParam": "NgBoxMap", "DefaultBox": "1" } },
+        { "Id": "okRecord", "Type": "SaveCellRecord", "Name": "保存良品记录", "X": 40, "Y": 490, "Properties": { "Fields": "CellCode = CellCode\nVoltage = Voltage\nInternalResistance = IR\nBinNo = 0\nIsOk = true" } },
+        { "Id": "hs", "Type": "Handshake", "Name": "写料盒并完成", "X": 40, "Y": 670, "Properties": { "RequestTag": "PLC1.CellReq", "DoneTag": "PLC1.CellDone", "ResultTag": "PLC1.BoxNo", "Result": "BoxNo", "Timeout": "5000" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 40, "Y": 760 },
+        { "Id": "ngBarcode", "Type": "SetVariable", "Name": "NG:条码", "X": 320, "Y": 130, "Properties": { "Assignments": "NgCode = 'NG_BARCODE'" } },
+        { "Id": "ngMes", "Type": "SetVariable", "Name": "NG:MES", "X": 320, "Y": 220, "Properties": { "Assignments": "NgCode = 'NG_MES'" } },
+        { "Id": "ngJudge", "Type": "NgJudge", "Name": "料盒映射", "X": 320, "Y": 310, "Properties": { "NgCode": "NgCode", "MapParam": "NgBoxMap", "DefaultBox": "1" } },
+        { "Id": "ngSave", "Type": "SaveNgRecord", "Name": "保存 NG", "X": 600, "Y": 400, "Properties": { "CellCode": "CellCode", "NgCode": "NgCode", "NgReason": "${NgReason}", "BoxNo": "BoxNo" } },
+        { "Id": "ngRecord", "Type": "SaveCellRecord", "Name": "保存 NG 记录", "X": 600, "Y": 490, "Properties": { "Fields": "CellCode = CellCode\nVoltage = Voltage\nInternalResistance = IR\nBinNo = BoxNo\nIsOk = false\nNgCode = NgCode" } },
+        { "Id": "upload", "Type": "MesCall", "Name": "NG 上传", "X": 600, "Y": 580, "Properties": { "InterfaceCode": "NgUpload", "Args": "CellCode = CellCode\nNgCode = NgCode\nBoxNo = BoxNo" } },
+        { "Id": "timeout", "Type": "RaiseAlarm", "Name": "握手超时", "X": 320, "Y": 760, "Properties": { "Source": "CellHandshake", "Message": "挑选握手超时：PLC 未复位请求位", "Level": "Error" } },
+        { "Id": "fail", "Type": "End", "Name": "失败", "X": 320, "Y": 850, "Properties": { "Status": "Failed", "Message": "握手超时" } }
+      ],
+      "Edges": [
+        { "From": "read", "To": "check" },
+        { "From": "check", "Port": "ok", "To": "mes" },
+        { "From": "check", "Port": "ng", "To": "ngBarcode" },
+        { "From": "mes", "Port": "ok", "To": "spec" },
+        { "From": "mes", "Port": "offline", "To": "spec" },
+        { "From": "mes", "Port": "ng", "To": "ngMes" },
+        { "From": "spec", "To": "judge" },
+        { "From": "judge", "Port": "ok", "To": "okRecord" },
+        { "From": "judge", "Port": "ng", "To": "ngSave" },
+        { "From": "okRecord", "To": "hs" },
+        { "From": "ngBarcode", "To": "ngJudge" },
+        { "From": "ngMes", "To": "ngJudge" },
+        { "From": "ngJudge", "Port": "ok", "To": "ngSave" },
+        { "From": "ngJudge", "Port": "ng", "To": "ngSave" },
+        { "From": "ngSave", "To": "ngRecord" },
+        { "From": "ngRecord", "To": "upload" },
+        { "From": "upload", "Port": "ok", "To": "hs" },
+        { "From": "upload", "Port": "ng", "To": "hs" },
+        { "From": "upload", "Port": "offline", "To": "hs" },
+        { "From": "hs", "To": "end" },
+        { "From": "hs", "Port": "timeout", "To": "timeout" },
+        { "From": "timeout", "To": "fail" }
+      ]
+    },
+    {
+      "Code": "NS_BoxFull",
+      "Name": "NG 料盒满处理",
+      "Description": "PLC 报料盒满 → 报警 → 等待清空 → 自动消警",
+      "Station": "ST01",
+      "StartNodeId": "alarm",
+      "Triggers": [ { "Type": "TagRisingEdge", "Tag": "PLC1.BoxFull" } ],
+      "Nodes": [
+        { "Id": "alarm", "Type": "RaiseAlarm", "Name": "料盒满报警", "X": 40, "Y": 40, "Properties": { "Source": "NgBoxFull", "Message": "NG 料盒已满，请清空", "Level": "Warning" } },
+        { "Id": "wait", "Type": "WaitSignal", "Name": "等待清空", "X": 40, "Y": 130, "Properties": { "Condition": "{Tag:PLC1.BoxFull} == false", "Timeout": "0", "PollMs": "100" } },
+        { "Id": "clear", "Type": "ClearAlarm", "Name": "消警", "X": 40, "Y": 220, "Properties": { "Source": "NgBoxFull" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 40, "Y": 310 }
+      ],
+      "Edges": [
+        { "From": "alarm", "To": "wait" },
+        { "From": "wait", "To": "clear" },
+        { "From": "wait", "Port": "timeout", "To": "clear" },
+        { "From": "clear", "To": "end" }
+      ]
+    }
+  ]
+}

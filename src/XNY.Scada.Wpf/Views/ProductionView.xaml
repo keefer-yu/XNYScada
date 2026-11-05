@@ -1,0 +1,104 @@
+<UserControl x:Class="XNY.Scada.Wpf.Views.ProductionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <WrapPanel Style="{StaticResource ToolBarPanel}">
+            <TextBlock Text="从" Style="{StaticResource FieldLabel}" />
+            <DatePicker SelectedDate="{Binding From}" Width="130" Margin="0,0,8,0" />
+            <TextBlock Text="到" Style="{StaticResource FieldLabel}" />
+            <DatePicker SelectedDate="{Binding To}" Width="130" Margin="0,0,8,0" />
+            <TextBlock Text="电芯码" Style="{StaticResource FieldLabel}" />
+            <TextBox Text="{Binding CellCode, UpdateSourceTrigger=PropertyChanged}" Width="150" Margin="0,0,8,0" />
+            <TextBlock Text="托盘码" Style="{StaticResource FieldLabel}" />
+            <TextBox Text="{Binding TrayCode, UpdateSourceTrigger=PropertyChanged}" Width="130" Margin="0,0,8,0" />
+            <TextBlock Text="结果" Style="{StaticResource FieldLabel}" />
+            <ComboBox ItemsSource="{Binding ResultFilters}" SelectedItem="{Binding ResultFilter}" Width="80" Margin="0,0,8,0" />
+            <Button Content="查询" Command="{Binding QueryCommand}" Style="{StaticResource PrimaryButton}" />
+            <Button Content="导出 CSV" Command="{Binding ExportCommand}" Style="{StaticResource ToolButton}" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1" Margin="10,6">
+            <Run Text="合计 " /><Run Text="{Binding Total, Mode=OneWay}" FontWeight="Bold" />
+            <Run Text="   OK " /><Run Text="{Binding OkCount, Mode=OneWay}" Foreground="#2EB85C" FontWeight="Bold" />
+            <Run Text="   NG " /><Run Text="{Binding NgCount, Mode=OneWay}" Foreground="#E53E3E" FontWeight="Bold" />
+        </TextBlock>
+        <TabControl Grid.Row="2" Margin="5">
+            <TabItem Header="生产记录">
+                <DataGrid ItemsSource="{Binding Records}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="时间" Binding="{Binding CreateTime, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="150" />
+                        <DataGridTextColumn Header="电芯码" Binding="{Binding CellCode}" Width="180" />
+                        <DataGridTextColumn Header="托盘" Binding="{Binding TrayCode}" Width="120" />
+                        <DataGridTextColumn Header="位置" Binding="{Binding Position}" Width="50" />
+                        <DataGridTextColumn Header="电压" Binding="{Binding Voltage}" Width="70" />
+                        <DataGridTextColumn Header="内阻" Binding="{Binding InternalResistance}" Width="70" />
+                        <DataGridTextColumn Header="容量" Binding="{Binding Capacity}" Width="70" />
+                        <DataGridTextColumn Header="档位" Binding="{Binding BinName}" Width="80" />
+                        <DataGridCheckBoxColumn Header="OK" Binding="{Binding IsOk}" Width="45" />
+                        <DataGridTextColumn Header="NG 代码" Binding="{Binding NgCode}" Width="90" />
+                        <DataGridTextColumn Header="配方" Binding="{Binding RecipeCode}" Width="90" />
+                        <DataGridTextColumn Header="工位" Binding="{Binding Station}" Width="70" />
+                        <DataGridTextColumn Header="操作员" Binding="{Binding Operator}" Width="80" />
+                        <DataGridTextColumn Header="扩展" Binding="{Binding ExtraJson}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="NG 记录">
+                <DataGrid ItemsSource="{Binding NgRecords}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="时间" Binding="{Binding CreateTime, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="150" />
+                        <DataGridTextColumn Header="电芯码" Binding="{Binding CellCode}" Width="180" />
+                        <DataGridTextColumn Header="NG 代码" Binding="{Binding NgCode}" Width="100" />
+                        <DataGridTextColumn Header="料盒" Binding="{Binding BoxNo}" Width="60" />
+                        <DataGridTextColumn Header="原因" Binding="{Binding NgReason}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="小时产量">
+                <DataGrid ItemsSource="{Binding Hourly}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="时段" Binding="{Binding Hour, StringFormat=yyyy-MM-dd HH:00}" Width="160" />
+                        <DataGridTextColumn Header="产量" Binding="{Binding Total}" Width="100" />
+                        <DataGridTextColumn Header="OK" Binding="{Binding Ok}" Width="100" />
+                        <DataGridTextColumn Header="NG" Binding="{Binding Ng}" Width="100" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="托盘追溯">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,6">
+                        <TextBlock Text="电芯码 / 托盘码" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding TraceCode, UpdateSourceTrigger=PropertyChanged}" Width="220" Margin="0,0,8,0">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding TraceCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Button Content="追溯" Command="{Binding TraceCommand}" Style="{StaticResource PrimaryButton}" />
+                        <Button Content="整盘解绑" Command="{Binding UnbindTrayCommand}" Style="{StaticResource DangerButton}" />
+                        <TextBlock Text="{Binding TraceResult}" VerticalAlignment="Center" Margin="12,0" />
+                    </WrapPanel>
+                    <DataGrid ItemsSource="{Binding TrayCells}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="位置" Binding="{Binding Position}" Width="60" />
+                            <DataGridTextColumn Header="电芯码" Binding="{Binding CellCode}" Width="220" />
+                            <DataGridTextColumn Header="绑定时间" Binding="{Binding BindTime, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="160" />
+                            <DataGridTemplateColumn Header="操作" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="解绑" Padding="8,1" HorizontalAlignment="Left"
+                                                Command="{Binding DataContext.UnbindCellCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

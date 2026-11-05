@@ -1,0 +1,143 @@
+<UserControl x:Class="XNY.Scada.Wpf.Views.SystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <TabControl Margin="5">
+        <TabItem Header="机台与界面">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12" MaxWidth="720" HorizontalAlignment="Left">
+                    <TextBlock Text="机台" Style="{StaticResource CardTitle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition />
+                            <RowDefinition />
+                            <RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="机型" Style="{StaticResource FieldLabel}" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding MachineTypeChoices}" DisplayMemberPath="Value" SelectedValuePath="Key"
+                                  SelectedValue="{Binding MachineType}" Margin="0,0,0,6" />
+                        <TextBlock Grid.Row="1" Text="机台名称" Style="{StaticResource FieldLabel}" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MachineName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6" />
+                        <TextBlock Grid.Row="2" Text="工位" Style="{StaticResource FieldLabel}" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Station, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6" />
+                    </Grid>
+                    <TextBlock Text="主监控布局" Style="{StaticResource CardTitle}" Margin="0,12,0,8" />
+                    <WrapPanel Margin="0,0,0,6">
+                        <CheckBox Content="显示托盘矩阵（组盘/拆盘）" IsChecked="{Binding ShowTray}" Margin="0,0,16,0" />
+                        <TextBlock Text="行" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding TrayRows}" Width="50" Margin="0,0,10,0" />
+                        <TextBlock Text="列" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding TrayCols}" Width="50" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,0,0,6">
+                        <CheckBox Content="显示档位料箱（分档）" IsChecked="{Binding ShowBins}" Margin="0,0,16,0" />
+                        <TextBlock Text="档位数" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding BinCount}" Width="50" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,0,0,6">
+                        <CheckBox Content="显示 NG 统计（NG 挑选）" IsChecked="{Binding ShowNg}" Margin="0,0,16,0" />
+                        <TextBlock Text="NG 料盒数" Style="{StaticResource FieldLabel}" />
+                        <TextBox Text="{Binding NgBoxCount}" Width="50" />
+                    </WrapPanel>
+                    <TextBlock Text="关键点位（每行一个全名，显示在主监控）" Margin="0,8,0,2" />
+                    <TextBox Text="{Binding KeyTags, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CodeBox}" Height="90" />
+                    <TextBlock Text="手动流程按钮（每行一个流程编码）" Margin="0,8,0,2" />
+                    <TextBox Text="{Binding ManualFlows, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CodeBox}" Height="70" />
+                    <Button Content="保存机台配置" Command="{Binding SaveLayoutCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        <TabItem Header="机型模板">
+            <DockPanel Margin="8">
+                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <CheckBox Content="导入时清空现有设备与点位" IsChecked="{Binding ReplaceDevices}" Margin="0,0,16,0" VerticalAlignment="Center" />
+                    <Button Content="从文件导入…" Command="{Binding ImportTemplateFileCommand}" Style="{StaticResource ToolButton}" />
+                    <Button Content="导出当前配置为模板" Command="{Binding ExportTemplateCommand}" Style="{StaticResource ToolButton}" />
+                </WrapPanel>
+                <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,8"
+                           Text="机型模板包含：系统参数、界面布局、设备与点位、报警定义、配方与分档规则、MES 接口、全部流程。新机台导入模板后仅需修改 PLC 地址与参数即可投产。" />
+                <DataGrid ItemsSource="{Binding Templates}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="机型" Binding="{Binding MachineType}" Width="130" />
+                        <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="200" />
+                        <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*" />
+                        <DataGridTemplateColumn Width="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="导入" Padding="10,0"
+                                            Command="{Binding DataContext.ImportTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+        <TabItem Header="系统参数">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="360" />
+                </Grid.ColumnDefinitions>
+                <DataGrid ItemsSource="{Binding Params}" SelectedItem="{Binding SelectedParam}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="分组" Binding="{Binding Group}" Width="90" />
+                        <DataGridTextColumn Header="键" Binding="{Binding Key}" Width="160" />
+                        <DataGridTextColumn Header="值" Binding="{Binding Value}" Width="*" />
+                        <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="160" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                    <WrapPanel Margin="0,0,0,8">
+                        <Button Content="新增" Command="{Binding AddParamCommand}" Style="{StaticResource ToolButton}" />
+                        <Button Content="保存" Command="{Binding SaveParamCommand}" Style="{StaticResource PrimaryButton}" />
+                        <Button Content="删除" Command="{Binding DeleteParamCommand}" Style="{StaticResource DangerButton}" />
+                    </WrapPanel>
+                    <StackPanel DataContext="{Binding SelectedParam}" Visibility="{Binding Converter={StaticResource NotEmptyToVis}}">
+                        <TextBlock Text="键（流程中以 {Param:键} 引用）" />
+                        <TextBox Text="{Binding Key}" Margin="0,2,0,6" />
+                        <TextBlock Text="分组" />
+                        <TextBox Text="{Binding Group}" Margin="0,2,0,6" />
+                        <TextBlock Text="说明" />
+                        <TextBox Text="{Binding Description}" Margin="0,2,0,6" />
+                        <TextBlock Text="值" />
+                        <TextBox Text="{Binding Value}" Style="{StaticResource CodeBox}" Height="200" Margin="0,2,0,6" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </TabItem>
+        <TabItem Header="驱动与节点">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <DockPanel Margin="0,0,6,0">
+                    <TextBlock DockPanel.Dock="Top" Text="已加载 PLC 驱动（plugins 目录可扩展）" Style="{StaticResource CardTitle}" />
+                    <DataGrid ItemsSource="{Binding Drivers}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="厂商" Binding="{Binding Vendor}" Width="80" />
+                            <DataGridTextColumn Header="驱动键" Binding="{Binding Key}" Width="130" />
+                            <DataGridTextColumn Header="名称" Binding="{Binding DisplayName}" Width="*" />
+                            <DataGridTextColumn Header="实现" Binding="{Binding DriverType.FullName}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+                <DockPanel Grid.Column="1">
+                    <TextBlock DockPanel.Dock="Top" Text="已加载流程节点（plugins 目录可扩展）" Style="{StaticResource CardTitle}" />
+                    <DataGrid ItemsSource="{Binding NodeTypes}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="60" />
+                            <DataGridTextColumn Header="类型" Binding="{Binding Type}" Width="120" />
+                            <DataGridTextColumn Header="名称" Binding="{Binding DisplayName}" Width="110" />
+                            <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Grid>
+        </TabItem>
+    </TabControl>
+</UserControl>

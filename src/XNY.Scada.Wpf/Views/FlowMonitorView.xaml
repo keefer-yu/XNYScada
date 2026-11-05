@@ -1,0 +1,176 @@
+<UserControl x:Class="XNY.Scada.Wpf.Views.FlowMonitorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <WrapPanel Style="{StaticResource ToolBarPanel}">
+            <Ellipse Width="12" Height="12" Fill="{Binding EngineRunning, Converter={StaticResource StatusBrush}}" Margin="0,0,6,0" />
+            <TextBlock Text="引擎" Style="{StaticResource FieldLabel}" />
+            <Button Content="重载全部流程" Command="{Binding ReloadAllCommand}" Style="{StaticResource ToolButton}" />
+            <CheckBox Content="调试模式" IsChecked="{Binding DebugEnabled}" Margin="12,0,8,0" VerticalAlignment="Center" />
+            <CheckBox Content="单步" IsChecked="{Binding StepMode}" Margin="0,0,8,0" VerticalAlignment="Center" />
+            <Button Content="全部继续" Command="{Binding ContinueAllCommand}" Style="{StaticResource ToolButton}" />
+            <Button Content="清除断点" Command="{Binding ClearBreakpointsCommand}" Style="{StaticResource ToolButton}" />
+            <TextBlock Text="断点：" Style="{StaticResource FieldLabel}" Margin="8,0,0,0" />
+            <TextBlock Text="{Binding BreakpointsText}" VerticalAlignment="Center" Foreground="#E53E3E" />
+        </WrapPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top">
+                        <TextBlock Text="已发布流程" Style="{StaticResource CardTitle}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="触发输入 JSON" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding TriggerInput, UpdateSourceTrigger=PropertyChanged}" Width="220" />
+                        </StackPanel>
+                    </DockPanel>
+                    <DataGrid ItemsSource="{Binding Flows}" SelectedItem="{Binding SelectedFlow}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="编码" Binding="{Binding Code}" Width="120" />
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="版本" Binding="{Binding VersionText}" Width="110" />
+                            <DataGridCheckBoxColumn Header="启用" Binding="{Binding Enabled}" Width="45" />
+                            <DataGridTextColumn Header="运行中" Binding="{Binding RunningCount}" Width="55" />
+                            <DataGridTextColumn Header="完成" Binding="{Binding CompletedCount}" Width="60" />
+                            <DataGridTextColumn Header="失败" Binding="{Binding FailedCount}" Width="50" />
+                            <DataGridTextColumn Header="最近运行" Binding="{Binding LastRunAt, StringFormat=HH:mm:ss}" Width="75" />
+                            <DataGridTextColumn Header="最近错误" Binding="{Binding LastError}" Width="160" />
+                            <DataGridTemplateColumn Header="操作" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="触发" Padding="6,0" Margin="0,0,4,0"
+                                                    Command="{Binding DataContext.TriggerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            <Button Content="启/停" Padding="6,0"
+                                                    Command="{Binding DataContext.ToggleEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2*" />
+                </Grid.RowDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="运行中实例" Style="{StaticResource CardTitle}" />
+                        <DataGrid ItemsSource="{Binding Instances}" Style="{StaticResource ReadOnlyGrid}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="流程" Binding="{Binding FlowCode}" Width="90" />
+                                <DataGridTextColumn Header="实例" Binding="{Binding Id}" Width="95" />
+                                <DataGridTextColumn Header="当前节点" Binding="{Binding CurrentNode}" Width="*" />
+                                <DataGridCheckBoxColumn Header="暂停" Binding="{Binding Paused}" Width="40" />
+                                <DataGridTemplateColumn Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Content="继续" Padding="6,0" Margin="0,0,4,0"
+                                                        Command="{Binding DataContext.ContinueCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                <Button Content="取消" Padding="6,0"
+                                                        Command="{Binding DataContext.CancelInstanceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top">
+                            <TextBlock Text="实时事件" Style="{StaticResource CardTitle}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <CheckBox Content="实时" IsChecked="{Binding LiveEvents}" Margin="0,0,8,0" />
+                                <Button Content="清空" Command="{Binding ClearEventsCommand}" Padding="8,0" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ListBox ItemsSource="{Binding Events}" FontFamily="Consolas, Microsoft YaHei UI" FontSize="12" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                        <Setter Property="Foreground" Value="#E53E3E" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                        <Run Text="{Binding Time, StringFormat=HH:mm:ss.fff, Mode=OneWay}" Foreground="Gray" />
+                                        <Run Text="{Binding FlowCode, Mode=OneWay}" FontWeight="Bold" />
+                                        <Run Text="{Binding Text, Mode=OneWay}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock Text="执行历史（选中流程）" Style="{StaticResource CardTitle}" Margin="0,0,12,0" />
+                        <DatePicker SelectedDate="{Binding LogFrom}" Width="120" Margin="0,0,6,0" />
+                        <DatePicker SelectedDate="{Binding LogTo}" Width="120" Margin="0,0,6,0" />
+                        <ComboBox ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding LogStatus}" Width="100" Margin="0,0,6,0" />
+                        <Button Content="查询" Command="{Binding QueryLogsCommand}" Style="{StaticResource PrimaryButton}" />
+                    </WrapPanel>
+                    <DataGrid ItemsSource="{Binding Logs}" SelectedItem="{Binding SelectedLog}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="开始" Binding="{Binding StartedAt, StringFormat=MM-dd HH:mm:ss.fff}" Width="140" />
+                            <DataGridTextColumn Header="流程" Binding="{Binding FlowCode}" Width="100" />
+                            <DataGridTextColumn Header="版本" Binding="{Binding Version}" Width="45" />
+                            <DataGridTemplateColumn Header="状态" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Status}" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="耗时ms" Binding="{Binding DurationMs}" Width="70" />
+                            <DataGridTextColumn Header="触发" Binding="{Binding TriggerSource}" Width="150" />
+                            <DataGridTextColumn Header="错误" Binding="{Binding Error}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="节点轨迹" Style="{StaticResource CardTitle}" />
+                    <DataGrid ItemsSource="{Binding SelectedTrace}" Style="{StaticResource ReadOnlyGrid}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="节点" Binding="{Binding NodeName}" Width="*" />
+                            <DataGridTextColumn Header="端口" Binding="{Binding Port}" Width="70" />
+                            <DataGridTextColumn Header="ms" Binding="{Binding DurationMs}" Width="50" />
+                            <DataGridTextColumn Header="信息" Binding="{Binding Message}" Width="*" />
+                            <DataGridTextColumn Header="错误" Binding="{Binding Error}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

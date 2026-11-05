@@ -1,0 +1,198 @@
+{
+  "MachineType": "Grading",
+  "Name": "分档机（标准模板）",
+  "Description": "电芯到位 → 读取条码/电压/内阻/容量 → 重码校验 → 按配方分档规则计算档位 → 写档位给 PLC → 记录并上传 MES。档位规则在配方中维护。",
+  "Params": {
+    "MachineName": "分档机-01",
+    "LineCode": "L01",
+    "StationCode": "ST01"
+  },
+  "Layout": {
+    "ShowTray": false,
+    "ShowBins": true,
+    "BinCount": 8,
+    "ShowNg": true,
+    "NgBoxCount": 1,
+    "KeyTags": [ "PLC1.Auto", "PLC1.CellCode", "PLC1.Voltage", "PLC1.IR", "PLC1.Capacity", "PLC1.BinNo" ],
+    "ManualFlows": [ "G_ClearBins" ]
+  },
+  "Devices": [
+    {
+      "Name": "PLC1",
+      "DriverKey": "Simulator",
+      "Description": "主控 PLC（现场改为实际驱动）",
+      "Options": { "Instance": "Grading" },
+      "Groups": [
+        {
+          "Name": "Handshake",
+          "ScanIntervalMs": 50,
+          "Tags": [
+            { "Name": "CellReq", "Address": "M0", "DataType": "Bool", "Access": "Read", "Description": "测试完成请求分档（PLC→上位）" },
+            { "Name": "CellDone", "Address": "M1", "DataType": "Bool", "Description": "分档完成（上位→PLC）" },
+            { "Name": "BinNo", "Address": "D10", "DataType": "Int16", "Description": "目标档位（上位→PLC）" },
+            { "Name": "CellCode", "Address": "D100", "DataType": "String", "Length": 32, "Access": "Read", "Description": "电芯条码" },
+            { "Name": "Voltage", "Address": "D14", "DataType": "Float", "Access": "Read", "Description": "开路电压 V" },
+            { "Name": "IR", "Address": "D16", "DataType": "Float", "Access": "Read", "Description": "交流内阻 mΩ" },
+            { "Name": "Capacity", "Address": "D18", "DataType": "Float", "Access": "Read", "Description": "容量 Ah" },
+            { "Name": "BinClear", "Address": "M20", "DataType": "Bool", "Description": "料框清空确认（上位→PLC）" }
+          ]
+        },
+        {
+          "Name": "Status",
+          "ScanIntervalMs": 200,
+          "Tags": [
+            { "Name": "Auto", "Address": "M100", "DataType": "Bool", "Access": "Read", "Description": "自动运行" },
+            { "Name": "EStop", "Address": "M101", "DataType": "Bool", "Access": "Read", "Description": "急停" },
+            { "Name": "AirLow", "Address": "M102", "DataType": "Bool", "Access": "Read", "Description": "气压低" },
+            { "Name": "BinFull", "Address": "M105", "DataType": "Bool", "Access": "Read", "Description": "有料框满" },
+            { "Name": "ProbeTemp", "Address": "D40", "DataType": "Int16", "Scale": 0.1, "Access": "Read", "Description": "测试探针温度 ℃" }
+          ]
+        }
+      ]
+    }
+  ],
+  "Alarms": [
+    { "TagName": "PLC1.EStop", "Kind": "Bit", "Level": "Critical", "Message": "急停按下" },
+    { "TagName": "PLC1.AirLow", "Kind": "Bit", "Level": "Error", "Message": "气源压力不足" },
+    { "TagName": "PLC1.BinFull", "Kind": "Bit", "Level": "Warning", "Message": "料框已满，请更换" },
+    { "TagName": "PLC1.ProbeTemp", "Kind": "High", "Threshold": 60, "Level": "Warning", "Message": "测试探针温度过高" }
+  ],
+  "Recipes": [
+    {
+      "Code": "G-280AH",
+      "Name": "280Ah 分档",
+      "ProductModel": "LFP-280Ah",
+      "Activate": true,
+      "Params": { "NgBin": 8 },
+      "Rules": [
+        {
+          "BinNo": 1, "BinName": "A1", "Priority": 1, "BoxCapacity": 200,
+          "Conditions": [
+            { "Field": "Voltage", "Min": 3.28, "Max": 3.30 },
+            { "Field": "InternalResistance", "Max": 0.20 },
+            { "Field": "Capacity", "Min": 280 }
+          ]
+        },
+        {
+          "BinNo": 2, "BinName": "A2", "Priority": 2, "BoxCapacity": 200,
+          "Conditions": [
+            { "Field": "Voltage", "Min": 3.26, "Max": 3.30 },
+            { "Field": "InternalResistance", "Max": 0.22 },
+            { "Field": "Capacity", "Min": 280 }
+          ]
+        },
+        {
+          "BinNo": 3, "BinName": "B1", "Priority": 3, "BoxCapacity": 200,
+          "Conditions": [
+            { "Field": "Voltage", "Min": 3.24, "Max": 3.30 },
+            { "Field": "InternalResistance", "Max": 0.25 },
+            { "Field": "Capacity", "Min": 275 }
+          ]
+        },
+        {
+          "BinNo": 4, "BinName": "B2", "Priority": 4, "BoxCapacity": 200,
+          "Conditions": [
+            { "Field": "Voltage", "Min": 3.20, "Max": 3.32 },
+            { "Field": "InternalResistance", "Max": 0.30 },
+            { "Field": "Capacity", "Min": 270 }
+          ]
+        },
+        {
+          "BinNo": 7, "BinName": "NG-低压", "Priority": 50, "BoxCapacity": 100, "IsNg": true, "NgCode": "NG_V_LOW",
+          "Conditions": [ { "Field": "Voltage", "Max": 3.20 } ]
+        },
+        {
+          "BinNo": 8, "BinName": "NG", "Priority": 99, "BoxCapacity": 100, "IsNg": true, "NgCode": "NG_GRADE",
+          "Conditions": []
+        }
+      ]
+    }
+  ],
+  "MesInterfaces": [
+    {
+      "Code": "CellResult",
+      "Name": "分档结果上传",
+      "Url": "http://mes.local/api/cell/grade",
+      "Method": "POST",
+      "RequestTemplate": "{\"cellCode\":\"${CellCode}\",\"voltage\":${Voltage},\"ir\":${IR},\"capacity\":${Capacity},\"bin\":${BinNo},\"ng\":\"${NgCode}\"}",
+      "ResponseMapJson": "{\"Code\":\"code\",\"Msg\":\"message\"}",
+      "SuccessExpression": "Code == 0",
+      "TimeoutMs": 3000,
+      "RetryCount": 1,
+      "CacheWhenOffline": true,
+      "Enabled": false
+    }
+  ],
+  "Flows": [
+    {
+      "Code": "G_Cell",
+      "Name": "电芯分档",
+      "Description": "条码重码校验后按配方规则分档，NG 进入配方参数 NgBin 指定的档位",
+      "Station": "ST01",
+      "Concurrency": "Queue",
+      "TimeoutMs": 30000,
+      "StartNodeId": "read",
+      "Triggers": [ { "Type": "TagRisingEdge", "Tag": "PLC1.CellReq" } ],
+      "Nodes": [
+        { "Id": "read", "Type": "ReadTags", "Name": "读测试数据", "X": 40, "Y": 40, "Properties": { "Mappings": "CellCode = PLC1.CellCode\nVoltage = PLC1.Voltage\nIR = PLC1.IR\nCapacity = PLC1.Capacity" } },
+        { "Id": "check", "Type": "BarcodeCheck", "Name": "条码/重码校验", "X": 40, "Y": 130, "Properties": { "Value": "CellCode", "Regex": "^[A-Z0-9]{10,32}$", "MinLength": "10", "CheckDuplicate": "true" } },
+        { "Id": "grade", "Type": "CalcGrade", "Name": "分档计算", "X": 40, "Y": 220, "Properties": { "Inputs": "Voltage = Voltage\nInternalResistance = IR\nCapacity = Capacity" } },
+        { "Id": "save", "Type": "SaveCellRecord", "Name": "保存记录", "X": 40, "Y": 310, "Properties": { "Fields": "CellCode = CellCode\nVoltage = Voltage\nInternalResistance = IR\nCapacity = Capacity\nBinNo = BinNo\nBinName = BinName\nIsOk = true" } },
+        { "Id": "mes", "Type": "MesCall", "Name": "上传 MES", "X": 40, "Y": 400, "Properties": { "InterfaceCode": "CellResult", "Args": "CellCode = CellCode\nVoltage = Voltage\nIR = IR\nCapacity = Capacity\nBinNo = BinNo\nNgCode = NgCode" } },
+        { "Id": "hs", "Type": "Handshake", "Name": "写档位并完成", "X": 40, "Y": 490, "Properties": { "RequestTag": "PLC1.CellReq", "DoneTag": "PLC1.CellDone", "ResultTag": "PLC1.BinNo", "Result": "BinNo", "Timeout": "5000" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 40, "Y": 580 },
+        { "Id": "ngBarcode", "Type": "SetVariable", "Name": "NG:条码", "X": 320, "Y": 130, "Properties": { "Assignments": "BinNo = {Recipe:NgBin}\nBinName = 'NG'\nNgCode = 'NG_BARCODE'" } },
+        { "Id": "matched", "Type": "Condition", "Name": "命中 NG 档?", "X": 320, "Y": 220, "Properties": { "Expression": "BinNo > 0" } },
+        { "Id": "ngBin", "Type": "SetVariable", "Name": "NG:超范围", "X": 600, "Y": 220, "Properties": { "Assignments": "BinNo = {Recipe:NgBin}\nBinName = 'NG'" } },
+        { "Id": "ngSave", "Type": "SaveNgRecord", "Name": "保存 NG", "X": 320, "Y": 310, "Properties": { "CellCode": "CellCode", "NgCode": "NgCode", "NgReason": "${NgReason}", "BoxNo": "BinNo" } },
+        { "Id": "ngRecord", "Type": "SaveCellRecord", "Name": "保存 NG 记录", "X": 320, "Y": 400, "Properties": { "Fields": "CellCode = CellCode\nVoltage = Voltage\nInternalResistance = IR\nCapacity = Capacity\nBinNo = BinNo\nBinName = BinName\nIsOk = false\nNgCode = NgCode" } },
+        { "Id": "timeout", "Type": "RaiseAlarm", "Name": "握手超时", "X": 320, "Y": 580, "Properties": { "Source": "CellHandshake", "Message": "分档握手超时：PLC 未复位请求位", "Level": "Error" } },
+        { "Id": "fail", "Type": "End", "Name": "失败", "X": 320, "Y": 670, "Properties": { "Status": "Failed", "Message": "握手超时" } }
+      ],
+      "Edges": [
+        { "From": "read", "To": "check" },
+        { "From": "check", "Port": "ok", "To": "grade" },
+        { "From": "check", "Port": "ng", "To": "ngBarcode" },
+        { "From": "grade", "Port": "ok", "To": "save" },
+        { "From": "grade", "Port": "ng", "To": "matched" },
+        { "From": "matched", "Port": "true", "To": "ngSave" },
+        { "From": "matched", "Port": "false", "To": "ngBin" },
+        { "From": "ngBin", "To": "ngSave" },
+        { "From": "ngBarcode", "To": "ngSave" },
+        { "From": "ngSave", "To": "ngRecord" },
+        { "From": "ngRecord", "To": "mes" },
+        { "From": "save", "To": "mes" },
+        { "From": "mes", "Port": "ok", "To": "hs" },
+        { "From": "mes", "Port": "ng", "To": "hs" },
+        { "From": "mes", "Port": "offline", "To": "hs" },
+        { "From": "hs", "To": "end" },
+        { "From": "hs", "Port": "timeout", "To": "timeout" },
+        { "From": "timeout", "To": "fail" }
+      ]
+    },
+    {
+      "Code": "G_ClearBins",
+      "Name": "料框清空确认",
+      "Description": "人工更换料框后确认，通知 PLC 并清除料框满报警",
+      "Station": "ST01",
+      "StartNodeId": "confirm",
+      "Triggers": [ { "Type": "Manual" } ],
+      "Nodes": [
+        { "Id": "confirm", "Type": "Confirm", "Name": "确认", "X": 40, "Y": 40, "Properties": { "Title": "料框清空", "Message": "确认已更换满料框？", "Default": "false" } },
+        { "Id": "pulse", "Type": "WriteTag", "Name": "置清空位", "X": 40, "Y": 130, "Properties": { "Tag": "PLC1.BinClear", "Value": "true" } },
+        { "Id": "wait", "Type": "Delay", "Name": "保持 500ms", "X": 40, "Y": 220, "Properties": { "Milliseconds": "500" } },
+        { "Id": "reset", "Type": "WriteTag", "Name": "复位清空位", "X": 40, "Y": 310, "Properties": { "Tag": "PLC1.BinClear", "Value": "false" } },
+        { "Id": "log", "Type": "Log", "Name": "记录", "X": 40, "Y": 400, "Properties": { "Message": "操作员确认料框清空" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 300, "Y": 400 }
+      ],
+      "Edges": [
+        { "From": "confirm", "Port": "yes", "To": "pulse" },
+        { "From": "confirm", "Port": "no", "To": "end" },
+        { "From": "pulse", "To": "wait" },
+        { "From": "wait", "To": "reset" },
+        { "From": "reset", "To": "log" },
+        { "From": "log", "To": "end" }
+      ]
+    }
+  ]
+}

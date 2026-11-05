@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\XNY.Scada.Domain\XNY.Scada.Domain.csproj" />
+  </ItemGroup>
+</Project>

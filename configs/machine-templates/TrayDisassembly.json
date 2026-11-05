@@ -1,0 +1,218 @@
+{
+  "MachineType": "TrayDisassembly",
+  "Name": "拆盘机（标准模板）",
+  "Description": "托盘进站查询绑定关系 → 下发电芯数 → 逐位置取料解绑并记录 → 空盘释放上传。",
+  "Params": {
+    "MachineName": "拆盘机-01",
+    "LineCode": "L01",
+    "StationCode": "ST01"
+  },
+  "Layout": {
+    "ShowTray": true,
+    "TrayRows": 4,
+    "TrayCols": 6,
+    "ShowBins": false,
+    "ShowNg": true,
+    "NgBoxCount": 1,
+    "KeyTags": [ "PLC1.Auto", "PLC1.TrayCode", "PLC1.CellCount", "PLC1.Position", "PLC1.CellCode", "PLC1.TrayEmpty" ],
+    "ManualFlows": [ "TD_ClearTray" ]
+  },
+  "Devices": [
+    {
+      "Name": "PLC1",
+      "DriverKey": "Simulator",
+      "Description": "主控 PLC（现场改为实际驱动）",
+      "Options": { "Instance": "TrayDisassembly" },
+      "Groups": [
+        {
+          "Name": "Handshake",
+          "ScanIntervalMs": 50,
+          "Tags": [
+            { "Name": "TrayReq", "Address": "M10", "DataType": "Bool", "Access": "Read", "Description": "托盘到位请求（PLC→上位）" },
+            { "Name": "TrayDone", "Address": "M11", "DataType": "Bool", "Description": "托盘处理完成（上位→PLC）" },
+            { "Name": "TrayResult", "Address": "D30", "DataType": "Int16", "Description": "托盘结果 1=可拆 2=空盘/未知托盘" },
+            { "Name": "TrayCode", "Address": "D300", "DataType": "String", "Length": 32, "Access": "Read", "Description": "托盘码" },
+            { "Name": "CellCount", "Address": "D32", "DataType": "Int16", "Description": "托盘待拆电芯数（上位→PLC）" },
+            { "Name": "TrayEmpty", "Address": "M12", "DataType": "Bool", "Description": "拆空信号（上位→PLC）" },
+            { "Name": "CellReq", "Address": "M0", "DataType": "Bool", "Access": "Read", "Description": "取料完成请求（PLC→上位）" },
+            { "Name": "CellDone", "Address": "M1", "DataType": "Bool", "Description": "处理完成（上位→PLC）" },
+            { "Name": "CellResult", "Address": "D10", "DataType": "Int16", "Description": "结果 1=OK 下料 2=NG 剔除" },
+            { "Name": "Position", "Address": "D12", "DataType": "Int16", "Access": "Read", "Description": "取料位置（1 起）" },
+            { "Name": "CellCode", "Address": "D100", "DataType": "String", "Length": 32, "Access": "Read", "Description": "取料后扫码" }
+          ]
+        },
+        {
+          "Name": "Status",
+          "ScanIntervalMs": 200,
+          "Tags": [
+            { "Name": "Auto", "Address": "M100", "DataType": "Bool", "Access": "Read", "Description": "自动运行" },
+            { "Name": "EStop", "Address": "M101", "DataType": "Bool", "Access": "Read", "Description": "急停" },
+            { "Name": "AirLow", "Address": "M102", "DataType": "Bool", "Access": "Read", "Description": "气压低" },
+            { "Name": "GripperFault", "Address": "M104", "DataType": "Bool", "Access": "Read", "Description": "夹爪故障" }
+          ]
+        }
+      ]
+    }
+  ],
+  "Alarms": [
+    { "TagName": "PLC1.EStop", "Kind": "Bit", "Level": "Critical", "Message": "急停按下" },
+    { "TagName": "PLC1.AirLow", "Kind": "Bit", "Level": "Error", "Message": "气源压力不足" },
+    { "TagName": "PLC1.GripperFault", "Kind": "Bit", "Level": "Error", "Message": "夹爪故障" }
+  ],
+  "Recipes": [
+    {
+      "Code": "TD-280AH",
+      "Name": "280Ah 拆盘 4x6",
+      "ProductModel": "LFP-280Ah",
+      "Activate": true,
+      "Params": { "TrayRows": 4, "TrayCols": 6 }
+    }
+  ],
+  "MesInterfaces": [
+    {
+      "Code": "CellUnbind",
+      "Name": "电芯解绑上传",
+      "Url": "http://mes.local/api/cell/unbind",
+      "Method": "POST",
+      "RequestTemplate": "{\"trayCode\":\"${TrayCode}\",\"position\":${Position},\"cellCode\":\"${CellCode}\"}",
+      "ResponseMapJson": "{\"Code\":\"code\",\"Msg\":\"message\"}",
+      "SuccessExpression": "Code == 0",
+      "TimeoutMs": 3000,
+      "RetryCount": 1,
+      "CacheWhenOffline": true,
+      "Enabled": false
+    },
+    {
+      "Code": "TrayRelease",
+      "Name": "空托盘释放",
+      "Url": "http://mes.local/api/tray/release",
+      "Method": "POST",
+      "RequestTemplate": "{\"trayCode\":\"${TrayCode}\"}",
+      "ResponseMapJson": "{\"Code\":\"code\",\"Msg\":\"message\"}",
+      "SuccessExpression": "Code == 0",
+      "TimeoutMs": 3000,
+      "RetryCount": 1,
+      "CacheWhenOffline": true,
+      "Enabled": false
+    }
+  ],
+  "Flows": [
+    {
+      "Code": "TD_TrayIn",
+      "Name": "托盘进站",
+      "Description": "查询托盘绑定电芯，下发待拆数量，登记在制托盘与剩余数",
+      "Station": "ST01",
+      "TimeoutMs": 30000,
+      "StartNodeId": "read",
+      "Triggers": [ { "Type": "TagRisingEdge", "Tag": "PLC1.TrayReq" } ],
+      "Nodes": [
+        { "Id": "read", "Type": "ReadTag", "Name": "读托盘码", "X": 40, "Y": 40, "Properties": { "Tag": "PLC1.TrayCode", "Variable": "TrayCode" } },
+        { "Id": "load", "Type": "LoadTray", "Name": "查询绑定电芯", "X": 40, "Y": 130, "Properties": { "TrayCode": "TrayCode" } },
+        { "Id": "register", "Type": "SetVariable", "Name": "登记在制托盘", "X": 40, "Y": 220, "Properties": { "Assignments": "TrayCode = TrayCode\nRemain = TrayCellCount", "Scope": "Station" } },
+        { "Id": "write", "Type": "WriteTags", "Name": "下发待拆数", "X": 40, "Y": 310, "Properties": { "Mappings": "PLC1.TrayEmpty = false\nPLC1.CellCount = TrayCellCount" } },
+        { "Id": "hsOk", "Type": "Handshake", "Name": "回复可拆", "X": 40, "Y": 400, "Properties": { "RequestTag": "PLC1.TrayReq", "DoneTag": "PLC1.TrayDone", "ResultTag": "PLC1.TrayResult", "Result": "1", "Timeout": "5000" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 40, "Y": 490 },
+        { "Id": "alarm", "Type": "RaiseAlarm", "Name": "空盘报警", "X": 300, "Y": 130, "Properties": { "Source": "TrayEmptyIn", "Message": "${NgReason}", "Level": "Warning" } },
+        { "Id": "hsNg", "Type": "Handshake", "Name": "回复空盘", "X": 300, "Y": 220, "Properties": { "RequestTag": "PLC1.TrayReq", "DoneTag": "PLC1.TrayDone", "ResultTag": "PLC1.TrayResult", "Result": "2", "Timeout": "5000" } },
+        { "Id": "timeout", "Type": "RaiseAlarm", "Name": "握手超时", "X": 300, "Y": 400, "Properties": { "Source": "TrayHandshake", "Message": "托盘握手超时：PLC 未复位请求位", "Level": "Error" } },
+        { "Id": "fail", "Type": "End", "Name": "失败", "X": 300, "Y": 490, "Properties": { "Status": "Failed", "Message": "握手超时" } }
+      ],
+      "Edges": [
+        { "From": "read", "To": "load" },
+        { "From": "load", "Port": "ok", "To": "register" },
+        { "From": "load", "Port": "ng", "To": "alarm" },
+        { "From": "register", "To": "write" },
+        { "From": "write", "To": "hsOk" },
+        { "From": "hsOk", "To": "end" },
+        { "From": "hsOk", "Port": "timeout", "To": "timeout" },
+        { "From": "alarm", "To": "hsNg" },
+        { "From": "hsNg", "To": "end" },
+        { "From": "hsNg", "Port": "timeout", "To": "timeout" },
+        { "From": "timeout", "To": "fail" }
+      ]
+    },
+    {
+      "Code": "TD_Cell",
+      "Name": "电芯拆盘",
+      "Description": "按位置解绑电芯、记录并上传；剩余数归零时通知 PLC 拆空并释放托盘",
+      "Station": "ST01",
+      "Concurrency": "Queue",
+      "TimeoutMs": 30000,
+      "StartNodeId": "read",
+      "Triggers": [ { "Type": "TagRisingEdge", "Tag": "PLC1.CellReq" } ],
+      "Nodes": [
+        { "Id": "read", "Type": "ReadTags", "Name": "读位置/条码", "X": 40, "Y": 40, "Properties": { "Mappings": "Position = PLC1.Position\nCellCode = PLC1.CellCode" } },
+        { "Id": "tray", "Type": "SetVariable", "Name": "取在制托盘", "X": 40, "Y": 130, "Properties": { "Assignments": "TrayCode = {Station:TrayCode}" } },
+        { "Id": "unbind", "Type": "UnbindTray", "Name": "位置解绑", "X": 40, "Y": 220, "Properties": { "TrayCode": "TrayCode", "Position": "Position" } },
+        { "Id": "found", "Type": "Condition", "Name": "该位置有电芯?", "X": 40, "Y": 310, "Properties": { "Expression": "UnboundCount > 0" } },
+        { "Id": "save", "Type": "SaveCellRecord", "Name": "保存记录", "X": 40, "Y": 400, "Properties": { "Fields": "CellCode = CellCode\nTrayCode = TrayCode\nPosition = Position\nIsOk = true\nAction = 'Unbind'" } },
+        { "Id": "mes", "Type": "MesCall", "Name": "解绑上传", "X": 40, "Y": 490, "Properties": { "InterfaceCode": "CellUnbind", "Args": "TrayCode = TrayCode\nPosition = Position\nCellCode = CellCode" } },
+        { "Id": "remain", "Type": "SetVariable", "Name": "剩余数-1", "X": 40, "Y": 580, "Properties": { "Assignments": "Remain = {Station:Remain} - 1", "Scope": "Station" } },
+        { "Id": "hsOk", "Type": "Handshake", "Name": "回复 OK", "X": 40, "Y": 670, "Properties": { "RequestTag": "PLC1.CellReq", "DoneTag": "PLC1.CellDone", "ResultTag": "PLC1.CellResult", "Result": "1", "Timeout": "5000" } },
+        { "Id": "empty", "Type": "Condition", "Name": "拆空?", "X": 40, "Y": 760, "Properties": { "Expression": "{Station:Remain} <= 0" } },
+        { "Id": "signal", "Type": "WriteTag", "Name": "通知拆空", "X": 40, "Y": 850, "Properties": { "Tag": "PLC1.TrayEmpty", "Value": "true" } },
+        { "Id": "release", "Type": "MesCall", "Name": "空托盘释放", "X": 40, "Y": 940, "Properties": { "InterfaceCode": "TrayRelease", "Args": "TrayCode = TrayCode" } },
+        { "Id": "clear", "Type": "SetVariable", "Name": "清除在制托盘", "X": 40, "Y": 1030, "Properties": { "Assignments": "TrayCode = ''", "Scope": "Station" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 40, "Y": 1120 },
+        { "Id": "ngSave", "Type": "SaveNgRecord", "Name": "NG:位置无电芯", "X": 320, "Y": 310, "Properties": { "CellCode": "CellCode", "NgCode": "'NG_POSITION'", "NgReason": "托盘 ${TrayCode} 位置 ${Position} 无绑定电芯", "BoxNo": "1" } },
+        { "Id": "hsNg", "Type": "Handshake", "Name": "回复 NG", "X": 320, "Y": 400, "Properties": { "RequestTag": "PLC1.CellReq", "DoneTag": "PLC1.CellDone", "ResultTag": "PLC1.CellResult", "Result": "2", "Timeout": "5000" } },
+        { "Id": "timeout", "Type": "RaiseAlarm", "Name": "握手超时", "X": 320, "Y": 670, "Properties": { "Source": "CellHandshake", "Message": "电芯握手超时：PLC 未复位请求位", "Level": "Error" } },
+        { "Id": "fail", "Type": "End", "Name": "失败", "X": 320, "Y": 760, "Properties": { "Status": "Failed", "Message": "握手超时" } }
+      ],
+      "Edges": [
+        { "From": "read", "To": "tray" },
+        { "From": "tray", "To": "unbind" },
+        { "From": "unbind", "To": "found" },
+        { "From": "found", "Port": "true", "To": "save" },
+        { "From": "found", "Port": "false", "To": "ngSave" },
+        { "From": "save", "To": "mes" },
+        { "From": "mes", "Port": "ok", "To": "remain" },
+        { "From": "mes", "Port": "ng", "To": "remain" },
+        { "From": "mes", "Port": "offline", "To": "remain" },
+        { "From": "remain", "To": "hsOk" },
+        { "From": "hsOk", "To": "empty" },
+        { "From": "hsOk", "Port": "timeout", "To": "timeout" },
+        { "From": "empty", "Port": "true", "To": "signal" },
+        { "From": "empty", "Port": "false", "To": "end" },
+        { "From": "signal", "To": "release" },
+        { "From": "release", "Port": "ok", "To": "clear" },
+        { "From": "release", "Port": "ng", "To": "clear" },
+        { "From": "release", "Port": "offline", "To": "clear" },
+        { "From": "clear", "To": "end" },
+        { "From": "ngSave", "To": "hsNg" },
+        { "From": "hsNg", "To": "end" },
+        { "From": "hsNg", "Port": "timeout", "To": "timeout" },
+        { "From": "timeout", "To": "fail" }
+      ]
+    },
+    {
+      "Code": "TD_ClearTray",
+      "Name": "整盘解绑",
+      "Description": "人工将当前托盘剩余电芯全部解绑（异常处理）",
+      "Station": "ST01",
+      "StartNodeId": "tray",
+      "Triggers": [ { "Type": "Manual" } ],
+      "Nodes": [
+        { "Id": "tray", "Type": "SetVariable", "Name": "取在制托盘", "X": 40, "Y": 40, "Properties": { "Assignments": "TrayCode = {Station:TrayCode}" } },
+        { "Id": "has", "Type": "Condition", "Name": "有在制托盘?", "X": 40, "Y": 130, "Properties": { "Expression": "!isEmpty(TrayCode)" } },
+        { "Id": "confirm", "Type": "Confirm", "Name": "确认", "X": 40, "Y": 220, "Properties": { "Title": "整盘解绑", "Message": "确认解绑托盘 ${TrayCode} 的全部剩余电芯？", "Default": "false" } },
+        { "Id": "unbind", "Type": "UnbindTray", "Name": "整盘解绑", "X": 40, "Y": 310, "Properties": { "TrayCode": "TrayCode" } },
+        { "Id": "clear", "Type": "SetVariable", "Name": "清除在制托盘", "X": 40, "Y": 400, "Properties": { "Assignments": "TrayCode = ''\nRemain = 0", "Scope": "Station" } },
+        { "Id": "log", "Type": "Log", "Name": "记录", "X": 40, "Y": 490, "Properties": { "Message": "托盘 ${TrayCode} 整盘解绑 ${UnboundCount} 个电芯", "Level": "Warning" } },
+        { "Id": "none", "Type": "Log", "Name": "无托盘", "X": 300, "Y": 130, "Properties": { "Message": "当前无在制托盘", "Level": "Warning" } },
+        { "Id": "end", "Type": "End", "Name": "结束", "X": 300, "Y": 490 }
+      ],
+      "Edges": [
+        { "From": "tray", "To": "has" },
+        { "From": "has", "Port": "true", "To": "confirm" },
+        { "From": "has", "Port": "false", "To": "none" },
+        { "From": "confirm", "Port": "yes", "To": "unbind" },
+        { "From": "confirm", "Port": "no", "To": "end" },
+        { "From": "unbind", "To": "clear" },
+        { "From": "clear", "To": "log" },
+        { "From": "log", "To": "end" },
+        { "From": "none", "To": "end" }
+      ]
+    }
+  ]
+}

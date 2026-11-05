@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\XNY.Scada.Application\XNY.Scada.Application.csproj" />
+    <ProjectReference Include="..\..\src\XNY.Scada.Presentation\XNY.Scada.Presentation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\configs\machine-templates\*.json" Link="configs\machine-templates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

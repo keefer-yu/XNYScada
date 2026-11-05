@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\XNY.Scada.Domain\XNY.Scada.Domain.csproj" />
+    <ProjectReference Include="..\XNY.Scada.Device.Abstractions\XNY.Scada.Device.Abstractions.csproj" />
+    <ProjectReference Include="..\XNY.Scada.Mes\XNY.Scada.Mes.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" />
+  </ItemGroup>
+</Project>

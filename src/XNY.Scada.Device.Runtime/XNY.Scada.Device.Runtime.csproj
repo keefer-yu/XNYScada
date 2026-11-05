@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\XNY.Scada.Device.Abstractions\XNY.Scada.Device.Abstractions.csproj" />
+    <ProjectReference Include="..\XNY.Scada.Device.Hsl\XNY.Scada.Device.Hsl.csproj" />
+    <ProjectReference Include="..\XNY.Scada.Data\XNY.Scada.Data.csproj" />
+  </ItemGroup>
+</Project>
